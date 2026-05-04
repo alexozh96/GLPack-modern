@@ -53,3 +53,10 @@ Next phase: Phase 7 — Frontend Shell
 - Updated api/reports.ts with all 7 report types, JSON fetchers, and generic PDF downloader.
 - Vite build clean (0 errors, 92 modules).
 
+
+## Phase 12 — Dashboard (2026-05-04)
+- Built dashboard: 4 KPI cards (Revenue, Gross Profit %, Net Profit, YTD entries), CSS bar chart
+  for monthly volume, quick actions panel, recent entries table.
+- Promise.allSettled for graceful partial failure; loading skeletons for KPI cards.
+- Vite build clean (0 errors, 92 modules).
+
