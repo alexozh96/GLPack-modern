@@ -26,3 +26,9 @@ Next phase: Phase 7 — Frontend Shell
 - Vite build clean (0 errors, 87 modules). Dev server starts in 277ms.
 - Fixed Rolldown type-only import issue with `import type`.
 
+
+## Phase 8 — Accounts UI (2026-05-04)
+- Built full Chart of Accounts CRUD: list, search, prefix filter, create/edit modal, inline delete confirm.
+- Admin-only write controls (access_level >= 6). API errors surfaced in UI.
+- Vite build clean (0 errors, 88 modules).
+
