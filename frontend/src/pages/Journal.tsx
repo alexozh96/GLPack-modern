@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { listJournals, getJournal, createJournal, updateJournal, deleteJournal } from '../api/journal'
 import { listAccounts } from '../api/accounts'
@@ -87,6 +88,7 @@ function Combobox({ value, onChange, options, placeholder, inputClass = '' }: {
 
 export function Journal() {
   const { user } = useAuth()
+  const location = useLocation()
   const canWrite = (user?.access_level ?? 0) >= 3
 
   // view
@@ -135,6 +137,15 @@ export function Journal() {
     loadList()
     listAccounts().then(setAccounts).catch(() => {})
     listPhrases().then(setPhrases).catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // open a specific entry if navigated here from Ledger view
+  useEffect(() => {
+    const state = location.state as { openTrx?: string } | null
+    if (state?.openTrx) {
+      openEdit(state.openTrx)
+      window.history.replaceState({}, '')
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── list handlers ─────────────────────────────────────────────────────────

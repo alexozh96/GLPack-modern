@@ -1,47 +1,46 @@
-=== CHECKPOINT 9 ===
+=== CHECKPOINT 10 ===
 
 Phase completed:
-Phase 9 — Journal Entry UI
+Phase 10 — Ledger View UI
 
 Completed:
-- Phase 0–8 completed prior.
-- api/journal.ts: listJournals, getJournal, createJournal, updateJournal, deleteJournal.
-- api/phrases.ts: listPhrases.
-- Journal page with two views (list / form):
-  List view:
-    - Table: TRX, Date, Description, Debit, Credit, Edit/Delete (write users).
-    - Date range filter (from/to) with Apply and Clear buttons.
-    - Inline per-row delete confirmation.
-  Form view (create + edit):
-    - Date input (defaults to today).
-    - Dynamic line rows: account combobox, particular combobox, Dr input, Cr input, remove button.
-    - Account combobox filters accounts by code or name.
-    - Particular combobox filters phrases by text; shows dr_code/cr_code hints in label.
-    - Entering Dr clears Cr on the same row (and vice versa).
-    - Live total Dr / total Cr / difference display.
-    - Save button disabled until balanced (total_dr == total_cr > 0).
-    - API error messages surfaced below totals.
-    - "Post Entry" for create, "Update Entry" for edit.
-- Access control: write controls shown only to users with access_level >= 3.
+- Phase 0–9 completed prior.
+- api/ledger.ts: getLedger (GET /ledger with account, from_date, to_date params).
+- api/reports.ts: downloadLedgerPdf (GET /reports/ledger-account/{code}?format=pdf, blob download).
+- Ledger page (pages/Ledger.tsx):
+  - Account selector (select dropdown populated from GET /accounts).
+  - From/to date filters + Load button.
+  - Account name subtitle shown when account is selected.
+  - Transaction table: Date, TRX (clickable), Particular, Debit, Credit, Running Balance.
+  - Balance column: absolute value + Dr (blue) / Cr (amber) label based on sign.
+  - Totals footer: summed debit and credit columns.
+  - Empty state placeholder before first load.
+  - PDF Export button (visible when account + both dates set); triggers blob download.
+- Journal.tsx (minimal addition):
+  - Added useLocation import.
+  - Added useEffect that reads location.state.openTrx on mount and auto-opens the edit form
+    for that TRX; clears history state after opening to prevent re-trigger on back-navigation.
+  - TRX click in Ledger navigates to /journal with { state: { openTrx } }.
 
 Files changed:
-- frontend/src/api/journal.ts (new)
-- frontend/src/api/phrases.ts (new)
-- frontend/src/pages/Journal.tsx (rewrite — was placeholder)
+- frontend/src/api/ledger.ts (new)
+- frontend/src/api/reports.ts (new)
+- frontend/src/pages/Ledger.tsx (rewrite — was placeholder)
+- frontend/src/pages/Journal.tsx (minimal addition — useLocation + openTrx effect)
 
 Validation performed:
 - npx tsc --noEmit: 0 errors
-- npx vite build: ✓ 90 modules, 0 errors, built in 175ms
+- npx vite build: ✓ 92 modules, 0 errors, built in 183ms
 
 System state:
 - Backend API unchanged (no modifications).
-- Journal CRUD fully wired to GET/POST/PUT/DELETE /journal.
-- Phrases loaded for particular autocomplete (GET /phrases).
-- Accounts loaded for account combobox (GET /accounts).
+- Ledger view wired to GET /ledger.
+- PDF export wired to GET /reports/ledger-account/{code}?format=pdf.
+- TRX click in ledger navigates to journal entry edit form.
 
 Known issues / deferred items:
 - Token expiry / 401 auto-logout still deferred.
-- No pagination on the entries list.
+- Ledger loads all matching rows with no pagination (acceptable for typical use).
 
 Key constraints:
 - Do NOT modify backend unless there is a clear API mismatch.
@@ -50,13 +49,14 @@ Key constraints:
 - Do NOT scan the entire project unless explicitly required.
 
 Next phase:
-Phase 10 — Ledger View UI
+Phase 11 — Reports UI
 
 Next task:
-- Build ledger view: per-account running balance.
-- Wire up GET /ledger/{account} endpoint.
-- Show date, TRX, particular, Dr, Cr, running balance columns.
-- Add account selector and date range filter.
+- Build Reports page with selectable report types.
+- Wire up trial balance, profit & loss, balance sheet.
+- Add period start/end date pickers.
+- Display report data in structured tables.
+- Add PDF export per report.
 
 Resume instruction:
-Continue with Phase 10 only. Use build-system/phases/phase_10.md. Do NOT read full documentation.
+Continue with Phase 11 only. Use build-system/phases/phase_11.md. Do NOT read full documentation.

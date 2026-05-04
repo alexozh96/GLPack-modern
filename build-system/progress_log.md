@@ -39,3 +39,10 @@ Next phase: Phase 7 — Frontend Shell
 - Live balance indicator; Save disabled until balanced. Entering Dr clears Cr on same row.
 - Vite build clean (0 errors, 90 modules).
 
+
+## Phase 10 — Ledger View UI (2026-05-04)
+- Built ledger view: account selector, date range filter, running balance table with Dr/Cr labels, totals footer.
+- PDF export via blob download from /reports/ledger-account/{code}?format=pdf.
+- TRX click navigates to journal edit form via React Router location state.
+- Vite build clean (0 errors, 92 modules).
+
