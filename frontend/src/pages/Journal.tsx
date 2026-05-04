@@ -8,6 +8,7 @@ import { listPhrases } from '../api/phrases'
 import type { JournalSummary } from '../api/journal'
 import type { Account } from '../api/accounts'
 import type { Phrase } from '../api/phrases'
+import { PageHeader, cls } from '../components/ui'
 
 function todayStr() { return new Date().toISOString().slice(0, 10) }
 function round2(n: number) { return Math.round(n * 100) / 100 }
@@ -58,7 +59,7 @@ function Combobox({ value, onChange, options, placeholder, inputClass = '' }: {
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className={`border border-slate-200 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors ${inputClass}`}
+        className={`w-full ${cls.input} ${inputClass}`}
       />
       {open && visible.length > 0 && (
         <div className="absolute z-20 top-full left-0 mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg max-h-44 overflow-y-auto min-w-full">
@@ -225,7 +226,7 @@ export function Journal() {
               type="date"
               value={formDate}
               onChange={e => setFormDate(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+              className={cls.input}
             />
           </div>
 
@@ -266,7 +267,7 @@ export function Journal() {
                         type="number" min="0" step="0.01" value={row.dr}
                         onChange={e => setRow(row.key, { dr: e.target.value, cr: e.target.value ? '' : row.cr })}
                         placeholder="0.00"
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+                        className={`w-full ${cls.input} text-right`}
                       />
                     </td>
                     <td className="pr-3 py-2">
@@ -274,7 +275,7 @@ export function Journal() {
                         type="number" min="0" step="0.01" value={row.cr}
                         onChange={e => setRow(row.key, { cr: e.target.value, dr: e.target.value ? '' : row.dr })}
                         placeholder="0.00"
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+                        className={`w-full ${cls.input} text-right`}
                       />
                     </td>
                     <td className="py-2 pl-1">
@@ -317,24 +318,13 @@ export function Journal() {
             </span>
           </div>
 
-          {formError && (
-            <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {formError}
-            </div>
-          )}
+          {formError && <div className={cls.alertError}>{formError}</div>}
 
           <div className="flex gap-3">
-            <button
-              onClick={handleSave}
-              disabled={!balanced || formBusy}
-              className="bg-[#0875e1] hover:bg-[#0667c8] text-white px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors shadow-sm"
-            >
+            <button onClick={handleSave} disabled={!balanced || formBusy} className={cls.btnPrimary}>
               {formBusy ? 'Saving…' : editingTrxNo ? 'Update Entry' : 'Post Entry'}
             </button>
-            <button
-              onClick={() => setView('list')}
-              className="border border-slate-200 text-slate-600 px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
-            >
+            <button onClick={() => setView('list')} className={cls.btnSecondary}>
               Cancel
             </button>
           </div>
@@ -347,38 +337,27 @@ export function Journal() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Journal Entries</h2>
-          <p className="text-sm text-slate-400 mt-1">{entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}</p>
-        </div>
+      <PageHeader
+        title="Journal Entries"
+        sub={`${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`}
+      >
         {canWrite && (
-          <button
-            onClick={openNew}
-            className="bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors"
-          >
-            + New Entry
-          </button>
+          <button onClick={openNew} className={cls.btnPrimary}>+ New Entry</button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Date filter */}
-      <div className="flex gap-3 items-center flex-wrap">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 flex gap-3 items-center flex-wrap">
         <input
           type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+          className={cls.input}
         />
         <span className="text-slate-400 text-sm">to</span>
         <input
           type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+          className={cls.input}
         />
-        <button
-          onClick={applyFilter}
-          className="border border-slate-200 bg-white text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
-        >
-          Filter
-        </button>
+        <button onClick={applyFilter} className={cls.btnSecondary}>Filter</button>
         {(fromDate || toDate) && (
           <button onClick={clearFilter} className="text-sm text-slate-400 hover:text-[#0875e1] transition-colors">
             Clear
@@ -386,11 +365,7 @@ export function Journal() {
         )}
       </div>
 
-      {listError && (
-        <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-          {listError}
-        </div>
-      )}
+      {listError && <div className={cls.alertError}>{listError}</div>}
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         {listLoading ? (
@@ -401,22 +376,22 @@ export function Journal() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-24">TRX</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Description</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Debit</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Credit</th>
+                <th className={`${cls.th} w-24`}>TRX</th>
+                <th className={`${cls.th} w-28`}>Date</th>
+                <th className={cls.th}>Description</th>
+                <th className={`${cls.thRight} w-28`}>Debit</th>
+                <th className={`${cls.thRight} w-28`}>Credit</th>
                 {canWrite && <th className="w-32" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {entries.map(entry => (
                 <tr key={entry.trx_no} className="hover:bg-[#0875e1]/[0.03] transition-colors">
-                  <td className="px-5 py-3.5 font-mono text-slate-700">{entry.trx_no}</td>
-                  <td className="px-4 py-3.5 text-slate-500">{entry.date}</td>
-                  <td className="px-4 py-3.5 text-slate-800 max-w-xs truncate">{entry.description}</td>
-                  <td className="px-4 py-3.5 text-right font-mono text-slate-700">{fmtAmt(entry.total_dr)}</td>
-                  <td className="px-4 py-3.5 text-right font-mono text-slate-700">{fmtAmt(entry.total_cr)}</td>
+                  <td className={cls.tdMono}>{entry.trx_no}</td>
+                  <td className={cls.td}>{entry.date}</td>
+                  <td className={`${cls.td} max-w-xs truncate`}>{entry.description}</td>
+                  <td className={cls.tdRight}>{fmtAmt(entry.total_dr)}</td>
+                  <td className={cls.tdRight}>{fmtAmt(entry.total_cr)}</td>
                   {canWrite && (
                     <td className="px-5 py-3.5 text-right">
                       {deleteTarget === entry.trx_no ? (

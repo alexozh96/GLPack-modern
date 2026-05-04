@@ -63,7 +63,7 @@ export function Layout() {
   const pageTitle = PAGE_TITLES[location.pathname] ?? 'GLPack Modern'
 
   return (
-    <div className="flex h-screen bg-[#f4f6f8]">
+    <div className="flex h-screen bg-slate-50">
 
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside className="w-64 bg-[#0f2137] flex flex-col shrink-0 shadow-[2px_0_8px_rgba(0,0,0,0.25)]">
