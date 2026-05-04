@@ -117,7 +117,7 @@ export function BankReconciliation() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-semibold text-slate-800">Bank Reconciliation</h2>
+        <h2 className="text-xl font-bold text-slate-800">Bank Reconciliation</h2>
         <SummaryBar summary={summary} />
       </div>
 
@@ -129,7 +129,7 @@ export function BankReconciliation() {
           <button
             onClick={() => fileRef.current?.click()}
             disabled={importing}
-            className="px-3 py-1.5 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-50"
+            className="px-4 py-1.5 bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors shadow-sm"
           >
             {importing ? 'Importing…' : 'Choose File'}
           </button>
@@ -221,7 +221,7 @@ export function BankReconciliation() {
               <button
                 onClick={handleMatch}
                 disabled={!canMatch}
-                className="px-4 py-2 bg-blue-700 text-white text-sm font-medium rounded-lg hover:bg-blue-800 disabled:opacity-40"
+                className="px-4 py-2 bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium rounded-lg disabled:opacity-40 transition-colors shadow-sm"
               >
                 Match Selected
               </button>
@@ -244,12 +244,12 @@ export function BankReconciliation() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="text-left px-4 py-2 font-medium text-slate-600">Bank Date</th>
-                    <th className="text-left px-4 py-2 font-medium text-slate-600">Bank Description</th>
-                    <th className="text-right px-4 py-2 font-medium text-slate-600">Bank Amount</th>
-                    <th className="text-left px-4 py-2 font-medium text-slate-600">GL TRX</th>
-                    <th className="text-left px-4 py-2 font-medium text-slate-600">GL Particular</th>
-                    <th className="text-right px-4 py-2 font-medium text-slate-600">GL Dr/Cr</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Bank Date</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Bank Description</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Bank Amount</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">GL TRX</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">GL Particular</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">GL Dr/Cr</th>
                     {canWrite && <th className="px-4 py-2" />}
                   </tr>
                 </thead>

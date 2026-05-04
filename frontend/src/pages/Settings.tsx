@@ -26,7 +26,7 @@ function Field({
         onChange={e => onChange(e.target.value)}
         disabled={disabled}
         placeholder={placeholder ?? ''}
-        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
       />
     </div>
   )
@@ -151,7 +151,7 @@ export function Settings() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h2 className="text-xl font-semibold text-slate-800">Settings</h2>
+      <h2 className="text-xl font-bold text-slate-800">Settings</h2>
 
       {loadErr && (
         <div className="px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
@@ -199,7 +199,7 @@ export function Settings() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-50"
+              className="px-4 py-2 bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors shadow-sm"
             >
               {saving ? 'Saving…' : 'Save Settings'}
             </button>
@@ -241,7 +241,7 @@ export function Settings() {
                 type="date"
                 value={closeDate}
                 onChange={e => setCloseDate(e.target.value)}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
               />
             </div>
 
@@ -278,7 +278,7 @@ export function Settings() {
             value={phraseSearch}
             onChange={e => { setPhraseSearch(e.target.value); loadPhrases(e.target.value) }}
             placeholder="Search…"
-            className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 w-40"
+            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors w-40"
           />
         </div>
 
@@ -293,7 +293,7 @@ export function Settings() {
                 onKeyDown={e => e.key === 'Enter' && handleAddPhrase()}
                 placeholder="e.g. Cash sale"
                 maxLength={45}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
               />
             </div>
             <div className="w-24">
@@ -304,7 +304,7 @@ export function Settings() {
                 onChange={e => setNewDr(e.target.value.toUpperCase())}
                 placeholder="CB01"
                 maxLength={4}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
               />
             </div>
             <div className="w-24">
@@ -315,13 +315,13 @@ export function Settings() {
                 onChange={e => setNewCr(e.target.value.toUpperCase())}
                 placeholder="SA01"
                 maxLength={4}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
               />
             </div>
             <button
               onClick={handleAddPhrase}
               disabled={!newPhrase.trim() || phraseBusy}
-              className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-50"
+              className="px-4 py-2 bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors shadow-sm"
             >
               {phraseBusy ? 'Adding…' : 'Add'}
             </button>
@@ -335,9 +335,9 @@ export function Settings() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-5 py-2.5 font-medium text-slate-600">Phrase</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-24">Dr</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-24">Cr</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Phrase</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-24">Dr</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-24">Cr</th>
                 {canWrite && <th className="w-16" />}
               </tr>
             </thead>

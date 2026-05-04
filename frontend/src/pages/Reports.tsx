@@ -394,12 +394,12 @@ export function Reports() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-slate-800">Reports</h2>
+        <h2 className="text-xl font-bold text-slate-800">Reports</h2>
         {canGenerate && (
           <button
             onClick={handleAllPdf}
             disabled={allPdfBusy}
-            className="border border-slate-300 text-slate-700 text-sm px-3 py-1.5 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="border border-slate-200 text-slate-700 text-sm px-3 py-1.5 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
           >
             {allPdfBusy ? 'Exporting…' : 'Download All (PDF)'}
           </button>
@@ -414,7 +414,7 @@ export function Reports() {
             onClick={() => switchTab(tab.key)}
             className={`px-3 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${
               activeTab === tab.key
-                ? 'border-slate-800 text-slate-800 font-medium'
+                ? 'border-[#0875e1] text-[#0875e1] font-medium'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -429,19 +429,19 @@ export function Reports() {
           type="date"
           value={periodStart}
           onChange={e => setPeriodStart(e.target.value)}
-          className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
         />
         <span className="text-slate-400 text-sm">to</span>
         <input
           type="date"
           value={periodEnd}
           onChange={e => setPeriodEnd(e.target.value)}
-          className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
         />
         <button
           onClick={handleGenerate}
           disabled={!canGenerate || loading}
-          className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-slate-700 disabled:opacity-50 transition-colors"
+          className="bg-[#0875e1] hover:bg-[#0667c8] text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors shadow-sm"
         >
           {loading ? 'Generating…' : 'Generate'}
         </button>
@@ -449,7 +449,7 @@ export function Reports() {
           <button
             onClick={handlePdf}
             disabled={pdfBusy}
-            className="border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
           >
             {pdfBusy ? 'Exporting…' : 'Export PDF'}
           </button>

@@ -83,7 +83,7 @@ export function Ledger() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-slate-800">Ledger View</h2>
+        <h2 className="text-xl font-bold text-slate-800">Ledger View</h2>
         {canPdf && (
           <button
             onClick={handlePdf}
@@ -100,7 +100,7 @@ export function Ledger() {
         <select
           value={account}
           onChange={e => { setAccount(e.target.value); setLoaded(false) }}
-          className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
         >
           <option value="">Select account…</option>
           {accounts.map(a => (
@@ -112,20 +112,20 @@ export function Ledger() {
           type="date"
           value={fromDate}
           onChange={e => setFromDate(e.target.value)}
-          className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
         />
         <span className="text-slate-400 text-sm">to</span>
         <input
           type="date"
           value={toDate}
           onChange={e => setToDate(e.target.value)}
-          className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
         />
 
         <button
           onClick={loadLedger}
           disabled={!account || loading}
-          className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-slate-700 disabled:opacity-50 transition-colors"
+          className="bg-[#0875e1] hover:bg-[#0667c8] text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors shadow-sm"
         >
           {loading ? 'Loading…' : 'Load'}
         </button>
@@ -157,12 +157,12 @@ export function Ledger() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-28">Date</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-20">TRX</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-slate-600">Particular</th>
-                    <th className="text-right px-4 py-2.5 font-medium text-slate-600 w-28">Debit</th>
-                    <th className="text-right px-4 py-2.5 font-medium text-slate-600 w-28">Credit</th>
-                    <th className="text-right px-4 py-2.5 font-medium text-slate-600 w-32">Balance</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Date</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-20">TRX</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Particular</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Debit</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Credit</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-32">Balance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
