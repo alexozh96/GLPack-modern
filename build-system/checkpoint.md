@@ -1,43 +1,63 @@
-=== CHECKPOINT 12 ===
+=== CHECKPOINT 14 ===
 
 Phase completed:
-Phase 12 — Dashboard
+Phase 14 — Bank Reconciliation
 
 Completed:
-- Phase 0–11 completed prior.
-- Dashboard page (pages/Dashboard.tsx):
-  - YTD period computed automatically (Jan 1 of current year → today).
-  - 4 KPI cards: Total Revenue, Gross Profit %, Net Profit (after tax), Journal Entries (YTD).
-    - Revenue/profit from GET /reports/profit-loss (current year period).
-    - Entry count from GET /journal (filtered to current year).
-  - Monthly transaction volume bar chart: CSS-only, last 12 months of journal Dr totals,
-    tooltips on hover, month labels below bars.
-  - Quick Actions panel: New Journal Entry (write-only), Chart of Accounts,
-    Trial Balance → Reports, Financial Statements → Reports.
-  - Recent Journal Entries table: last 8 entries sorted desc by date, clickable rows
-    navigate to /journal.
-  - Graceful partial failure: Promise.allSettled used — dashboard renders even if one
-    API call fails, with amber warning banner.
-  - Loading skeleton for KPI cards (animate-pulse placeholders).
-- No backend changes, no new API files (uses existing getProfitLoss + listJournals).
+- Phase 0–13 completed prior.
+- Backend BankRow model (models/reconciliation.py):
+  - Fields: id, date, description, amount (Numeric 12,2), matched_ledger_id (FK ledger.id,
+    nullable, unique for 1-to-1 match), imported_at (DateTime, server_default=now).
+- Backend schemas (schemas/reconciliation.py):
+  - BankRowRead, GlEntryRead, MatchedPairRead, MatchIn, ImportResult, ReconcSummary.
+- Backend router (routers/reconciliation.py — prefix /reconciliation):
+  - POST /import: multipart CSV upload (WriteAccess); parses date/description/amount columns
+    (case-insensitive header, multi-format date parsing, strips currency symbols from amounts).
+  - GET /unmatched: bank rows where matched_ledger_id IS NULL.
+  - GET /matched: joined bank_rows + ledger where matched_ledger_id IS NOT NULL.
+  - GET /gl-cash: ledger entries for CB* accounts not referenced by any bank row.
+  - POST /match: links bank row to ledger entry (409 if either already matched).
+  - DELETE /match/{bank_row_id}: clears matched_ledger_id.
+  - GET /summary: total/matched/unmatched counts.
+- models/__init__.py: BankRow registered.
+- app/main.py: reconciliation router included.
+- Frontend api/reconciliation.ts: all 7 API functions with full TypeScript types.
+- Frontend pages/BankReconciliation.tsx (rewrite from placeholder):
+  - Summary bar (total/matched/unmatched badges).
+  - CSV import button with file picker; success/error message (WriteAccess only).
+  - Two-column selection: unmatched bank rows (left) / unmatched GL cash entries (right).
+    Click to select/deselect; selected row highlighted with blue left border.
+  - Match Selected button (enabled when one of each selected); error banner on failure.
+  - Matched pairs table at bottom: bank date/desc/amount, GL trx/particular/dr-cr,
+    Unmatch button per row (WriteAccess only).
+  - Promise.allSettled for graceful loading; 80-unit max-height scroll on selection columns.
+- backend/tests/test_reconciliation.py: 8 tests covering import, unmatched, GL cash,
+  match/unmatch, duplicate match rejection, and summary counts.
 
 Files changed:
-- frontend/src/pages/Dashboard.tsx (rewrite — was placeholder)
+- backend/app/main.py (modified — reconciliation router added)
+- backend/app/models/__init__.py (modified — BankRow registered)
+- backend/app/models/reconciliation.py (new)
+- backend/app/routers/reconciliation.py (new)
+- backend/app/schemas/reconciliation.py (new)
+- backend/tests/test_reconciliation.py (new)
+- frontend/src/api/reconciliation.ts (new)
+- frontend/src/pages/BankReconciliation.tsx (rewrite)
 
 Validation performed:
+- uv run pytest backend/tests/ -q: 180/180 passed
 - npx tsc --noEmit: 0 errors
-- npx vite build: ✓ 92 modules, 0 errors, built in 190ms
+- npx vite build: ✓ 95 modules, 0 errors, built in 219ms
 
 System state:
-- All frontend pages implemented: Dashboard, Accounts, Journal, Ledger, Reports,
-  plus Settings and BankReconciliation remain as placeholders.
-- Full frontend-to-backend wiring complete for core accounting workflows.
+- All frontend pages fully implemented: Dashboard, Accounts, Journal, Ledger, Reports,
+  Settings, Bank Reconciliation.
+- Full accounting workflow complete end-to-end.
 
 Known issues / deferred items:
 - Token expiry / 401 auto-logout still deferred.
-- Settings page (GET/PUT /setup) not yet implemented.
-- Phrases management UI not yet implemented.
-- Bank Reconciliation page is a placeholder (no backend endpoint).
+- Phrases management UI not yet implemented (backend /phrases exists).
+- GL cash query only matches CB* prefix accounts; extend if other cash accounts are used.
 
 Key constraints:
 - Do NOT modify backend unless there is a clear API mismatch.
@@ -46,11 +66,9 @@ Key constraints:
 - Do NOT scan the entire project unless explicitly required.
 
 Next phase:
-Phase 13 — Settings & Phrases UI
+Phase 15 — Phrases Management UI
 
 Next task:
-- Build Settings page: company name and other setup key/value fields (GET /setup, PUT /setup/{key}).
-- Build Phrases management within Settings: list, create (with dr_code/cr_code), delete.
-
-Resume instruction:
-Continue with Phase 13 only. Use build-system/phases/phase_13.md. Do NOT read full documentation.
+- Build Phrases management page within Settings or as standalone: list all phrases (with
+  dr_code/cr_code), create new phrase (account selectors for dr/cr), delete. Uses existing
+  GET/POST/DELETE /phrases backend endpoints.

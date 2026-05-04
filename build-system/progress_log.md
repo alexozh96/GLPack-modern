@@ -60,3 +60,25 @@ Next phase: Phase 7 — Frontend Shell
 - Promise.allSettled for graceful partial failure; loading skeletons for KPI cards.
 - Vite build clean (0 errors, 92 modules).
 
+
+## Phase 14 — Bank Reconciliation (2026-05-04)
+- Backend: BankRow model (date, description, amount, matched_ledger_id FK, imported_at).
+  7 endpoints: CSV import (multi-format date/amount parsing), unmatched bank rows, matched pairs
+  (joined query), unmatched GL cash (CB* accounts not yet matched), match, unmatch, summary.
+- Frontend: two-column click-to-select UI (bank rows left, GL entries right), Match Selected
+  button, matched pairs table with Unmatch, summary badges, CSV file import button.
+- 8 new backend tests. Pytest: 180/180 passed. Vite build: 95 modules, 0 errors.
+
+
+## Phase 13 — Period Close (2026-05-04)
+- Backend period close service: queries cumulative P&L account balances (SA*/CO*/OI*/EX*/TX*),
+  posts a single balanced BALANCE CARRIED DOWN closing entry on period_end, transfers net
+  profit/loss to PL* account (auto-created as PL01 if absent). Stores locked_before in Setup.
+- Journal lock guard: PUT/DELETE reject entries on or before locked_before with HTTP 403.
+- Setup schema/router: added locked_before field to SetupRead, SetupUpdate, and _KEYS.
+- New POST /period/close endpoint (AdminAccess); new period router wired into main.py.
+- Frontend Settings page (rewrite): company settings panel (admin save), period close panel
+  with date picker, confirmation modal, locked_through display, success/error banners.
+- New frontend api/setup.ts and api/period.ts.
+- Pytest: 172/172 passed. Vite build: 94 modules, 0 errors.
+
