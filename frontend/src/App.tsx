@@ -1,48 +1,43 @@
-import { useEffect, useState } from 'react'
-import axios from 'axios'
-
-const API_BASE = 'http://localhost:8000'
-
-interface HealthResponse {
-  status: string
-  app: string
-}
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { Layout } from './components/Layout'
+import { Login } from './pages/Login'
+import { Dashboard } from './pages/Dashboard'
+import { Accounts } from './pages/Accounts'
+import { Journal } from './pages/Journal'
+import { Ledger } from './pages/Ledger'
+import { Reports } from './pages/Reports'
+import { BankReconciliation } from './pages/BankReconciliation'
+import { Settings } from './pages/Settings'
 
 function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    axios
-      .get<HealthResponse>(`${API_BASE}/health`)
-      .then((res) => setHealth(res.data))
-      .catch(() => setError('Cannot reach backend — is it running on port 8000?'))
-      .finally(() => setLoading(false))
-  }, [])
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white rounded-2xl shadow-md p-10 w-full max-w-md text-center space-y-4">
-        <h1 className="text-3xl font-bold text-slate-800">GLPack Modern</h1>
-        <p className="text-slate-500 text-sm">General Ledger Accounting System</p>
-
-        <div className="mt-6 p-4 rounded-lg border border-slate-200 bg-slate-50 text-left font-mono text-sm">
-          <p className="text-slate-400 text-xs mb-2">GET /health</p>
-          {loading && <p className="text-slate-400">Connecting...</p>}
-          {error && <p className="text-red-500">{error}</p>}
-          {health && (
-            <pre className="text-green-600">{JSON.stringify(health, null, 2)}</pre>
-          )}
-        </div>
-
-        {health && (
-          <p className="text-green-600 font-medium text-sm">
-            Backend connected successfully
-          </p>
-        )}
-      </div>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="accounts" element={<Accounts />} />
+            <Route path="journal" element={<Journal />} />
+            <Route path="ledger" element={<Ledger />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="bank-reconciliation" element={<BankReconciliation />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
 

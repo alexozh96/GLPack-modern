@@ -1,65 +1,64 @@
-=== CHECKPOINT 6 ===
+=== CHECKPOINT 7 ===
 
 Phase completed:
-Phase 6 — Authentication
+Phase 7 — Frontend Shell
 
 Completed:
-- Phase 0 project setup completed.
-- Phase 1 database schema and DBF seed data completed.
-- Phase 2 accounts, setup, and phrases API completed.
-- Phase 3 journal entry API completed.
-- Phase 4 reports API completed.
-- Phase 5 PDF export completed.
-- Phase 6 authentication completed.
-- JWT auth with 8-hour sessions and JTI deny-list on logout.
-- POST /auth/login, GET /auth/me, POST /auth/logout implemented.
-- Access levels: 1=read-only, 3=write, 6=admin enforced across all routers.
-- Admin-only user management CRUD in /users.
-- Default admin seeded (username: admin, password: admin123, access_level: 6).
-- All existing routers protected with get_current_user dependency.
+- Phase 0–6 completed prior (backend fully implemented and authenticated).
+- AuthContext with JWT storage in localStorage, signIn/signOut, and /auth/me rehydration on load.
+- api/auth.ts: axios instance with Authorization interceptor; login, me, logout calls.
+- ProtectedRoute: redirects unauthenticated users to /login, preserves intended destination.
+- Layout: sidebar nav with all 7 sections + top bar showing username and sign-out button.
+- Login page: form connected to backend POST /auth/login with error display.
+- React Router v7 routing: BrowserRouter, nested protected routes with Outlet.
+- Placeholder pages for Dashboard, Accounts, Journal, Ledger, Reports, BankReconciliation, Settings.
+- Fixed Vite 8/Rolldown type-only import issue (import type { UserRead }).
 
 Files changed:
-- backend/app/auth.py (JWT helpers, dependencies, access-level shorthands)
-- backend/app/models/token_deny.py (JTI deny-list model)
-- backend/app/routers/auth.py (login, me, logout endpoints)
-- backend/app/routers/users.py (admin-only user CRUD)
-- backend/app/schemas/user.py (LoginRequest, TokenResponse, UserRead, UserCreate, UserUpdate)
-- backend/app/main.py (auth and users routers registered)
-- backend/seed/seed_users.py (default admin seed)
-- backend/seed/run_all.py (seed_users called)
-- backend/app/models/__init__.py (TokenDeny and User exported)
-- backend/tests/test_users.py (fixed fixture conflict in two self-protection tests)
+- frontend/src/App.tsx (full rewrite with BrowserRouter + AuthProvider + Routes)
+- frontend/src/api/auth.ts (new — axios instance + login/me/logout + types)
+- frontend/src/context/AuthContext.tsx (new — AuthProvider, useAuth hook)
+- frontend/src/components/ProtectedRoute.tsx (new)
+- frontend/src/components/Layout.tsx (new — sidebar + top bar + Outlet)
+- frontend/src/pages/Login.tsx (new)
+- frontend/src/pages/Dashboard.tsx (new — placeholder)
+- frontend/src/pages/Accounts.tsx (new — placeholder)
+- frontend/src/pages/Journal.tsx (new — placeholder)
+- frontend/src/pages/Ledger.tsx (new — placeholder)
+- frontend/src/pages/Reports.tsx (new — placeholder)
+- frontend/src/pages/BankReconciliation.tsx (new — placeholder)
+- frontend/src/pages/Settings.tsx (new — placeholder)
 
 Validation performed:
-- uv run pytest backend/tests/test_auth.py backend/tests/test_users.py -v
-- 43 tests collected, 43 passed, 0 failed.
-- Login, /auth/me, logout, token invalidation, protected endpoints, access-level enforcement all verified.
+- npx tsc --noEmit: 0 errors
+- npx vite build: ✓ built in 163ms, 87 modules, 0 errors
+- Dev server: started on http://localhost:5173 in 277ms
 
 System state:
-- Backend APIs are fully implemented through Phase 6.
-- Authentication is enforced on all non-/health routes.
-- Database schema includes users and token_deny tables.
-- Default admin user is seeded via run_all.py.
+- Frontend shell fully scaffolded and functional.
+- Login page wired to POST /auth/login; stores JWT in localStorage.
+- All non-/login routes protected; unauthenticated users redirected to /login.
+- Backend must be running on port 8000 for login to succeed.
+- Sidebar nav items are placeholders — content built in later phases.
 
 Known issues / deferred items:
-- SECRET_KEY defaults to a dev secret; production deployments must set SECRET_KEY env var.
-- Token expiry cleanup (periodic purge of old token_deny rows) not implemented; deferred.
+- Token expiry not handled on the frontend (no auto-logout on 401).
+- @types/react-router-dom v5 devDependency is redundant (react-router-dom v7 ships own types) but harmless.
 
 Key constraints:
+- Do NOT modify backend unless there is a clear API mismatch.
 - Do NOT modify report calculation logic unless fixing a clearly proven bug.
 - Do NOT reload the full GLPACK_DOCUMENTATION.md by default.
 - Do NOT scan the entire project unless explicitly required.
-- Keep Phase 7 scoped to the React frontend shell.
 
 Next phase:
-Phase 7 — Frontend Shell
+Phase 8 — Accounts UI
 
 Next task:
-- Scaffold React/Vite frontend with Tailwind.
-- Add login page and JWT token storage.
-- Add protected route wrapper.
-- Add navigation shell (sidebar or top nav).
-- Wire up /auth/login and /auth/me API calls.
+- Build Chart of Accounts list page with search/filter.
+- Wire up GET /accounts to display accounts table.
+- Add create/edit account forms (write-level access only).
+- Connect to Layout's existing /accounts route.
 
 Resume instruction:
-Continue with Phase 7 only. Use build-system/phases/phase_7.md. Do NOT read full documentation.
+Continue with Phase 8 only. Use build-system/phases/phase_8.md. Do NOT read full documentation.

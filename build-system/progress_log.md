@@ -19,3 +19,10 @@ parameter from both tests.
 Validation: 43/43 tests passed (`test_auth.py` + `test_users.py`).
 
 Next phase: Phase 7 — Frontend Shell
+
+## Phase 7 — Frontend Shell (2026-05-04)
+- Built React frontend shell: AuthContext, ProtectedRoute, Layout with sidebar, Login page, 7 placeholder pages.
+- React Router v7 routing with nested protected routes.
+- Vite build clean (0 errors, 87 modules). Dev server starts in 277ms.
+- Fixed Rolldown type-only import issue with `import type`.
+
