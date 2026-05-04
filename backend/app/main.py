@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routers import accounts, auth, journal, ledger, period, phrases, reconciliation, reports, setup, users
+
 app = FastAPI(title="GLPack Modern", version="0.1.0")
 
 app.add_middleware(
@@ -10,6 +12,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router)
+app.include_router(accounts.router)
+app.include_router(setup.router)
+app.include_router(phrases.router)
+app.include_router(journal.router)
+app.include_router(ledger.router)
+app.include_router(reports.router)
+app.include_router(period.router)
+app.include_router(reconciliation.router)
+app.include_router(users.router)
 
 
 @app.get("/health")
