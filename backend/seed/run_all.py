@@ -9,6 +9,7 @@ from seed.seed_accounts import seed_accounts
 from seed.seed_phrases import seed_phrases
 from seed.seed_ledger import seed_ledger
 from seed.seed_setup import seed_setup
+from seed.seed_users import seed_users
 
 
 def main():
@@ -31,6 +32,11 @@ def main():
 
         print("Seeding setup...", end=" ", flush=True)
         n = seed_setup(session)
+        session.commit()
+        print(f"{n} rows")
+
+        print("Seeding users...", end=" ", flush=True)
+        n = seed_users(session)
         session.commit()
         print(f"{n} rows")
 

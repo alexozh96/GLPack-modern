@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\" -Recurse -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\frontend\\\\src\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\\\\app\\\\models\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\\\\app\\\\routers\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\\\\app\\\\schemas\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\\\\app\\\\services\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\\\\tests\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\\\\migrations\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\\\\seed\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\.claude\" -Force\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\GLPACK\" -File | Where-Object { $_.Extension -eq \".DBF\" } | Select-Object Name, Length | Sort-Object Name)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\GLPACK\" -File | Where-Object { $_.Extension -match \"^\\\\.\\(DBF|BAK|NTX|MEM|TXT|EXE|pdf\\)$\" } | Select-Object Name, Extension, Length | Sort-Object Name)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\GLPACK\" -File | Select-Object Name, @{Name='Extension';Expression={$_.Extension.ToUpper\\(\\)}}, @{Name='Size\\(bytes\\)';Expression={$_.Length}} | Sort-Object Name | Format-Table)",
+      "PowerShell(\\(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\frontend\\\\public\" -Recurse\\) | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\" | Where-Object { !$_.PSIsContainer } | Select-Object Name)",
+      "PowerShell(New-Item *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(uv sync *)",
+      "Bash(uv run *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\backend\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Format-Table -HideTableHeaders)",
+      "Bash(python -m pytest tests/test_auth.py tests/test_users.py -v)",
+      "Bash(git commit *)",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)"
+    ]
+  }
+}

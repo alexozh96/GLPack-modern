@@ -1,0 +1,64 @@
+We are working on glpack-modern.
+
+You are operating in PHASE-LOCKED MODE.
+
+First, read only these two files:
+1. build-system/checkpoint.md
+2. build-system/phases/phase_6.md
+
+Do NOT read GLPACK_DOCUMENTATION.md.
+Do NOT scan the entire project.
+Do NOT read unrelated test files unless required for a failing validation step.
+Only read files directly needed for this phase.
+If additional context is required, ask before reading more.
+
+Your task:
+Complete Phase 6 — Authentication using build-system/phases/phase_6.md.
+
+Rules:
+- Stay strictly within Phase 6 — Authentication.
+- Do NOT rewrite working features from earlier phases.
+- Do NOT modify report calculation logic unless fixing a clearly proven bug.
+- Keep changes minimal and scoped.
+- Prefer targeted file reads over broad project exploration.
+
+At the end of the phase, you MUST do all of the following:
+1. Run the relevant validation commands for this phase.
+2. Update build-system/checkpoint.md directly with the next checkpoint.
+3. Append a short entry to build-system/progress_log.md.
+4. Output the final checkpoint in chat.
+5. Tell me the exact git command to commit the phase.
+
+Checkpoint format to write into build-system/checkpoint.md:
+
+=== CHECKPOINT 6 ===
+
+Phase completed:
+Phase 6 — Authentication
+
+Completed:
+- ...
+
+Files changed:
+- ...
+
+Validation performed:
+- ...
+
+System state:
+- ...
+
+Known issues / deferred items:
+- ...
+
+Key constraints:
+- ...
+
+Next phase:
+Phase 7 — Frontend Shell
+
+Next task:
+- ...
+
+Resume instruction:
+Continue with Phase 7 only. Use build-system/phases/phase_7.md. Do NOT read full documentation.
