@@ -75,7 +75,7 @@ export function GlobalSearch() {
     if (query.length >= 2 && hasResults(results)) setOpen(true)
   }
 
-  function goAccount(code: string) {
+  function goAccount() {
     setOpen(false)
     setQuery('')
     navigate('/accounts')
@@ -126,7 +126,7 @@ export function GlobalSearch() {
                   {results.accounts.map(a => (
                     <button
                       key={a.code}
-                      onClick={() => goAccount(a.code)}
+                      onClick={() => goAccount()}
                       className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3"
                     >
                       <span className="font-mono text-xs text-slate-400 w-10 shrink-0">{a.code}</span>

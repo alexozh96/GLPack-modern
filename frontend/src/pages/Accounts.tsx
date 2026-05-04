@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, FormEvent } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import type { FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { listAccounts, createAccount, updateAccount, deleteAccount } from '../api/accounts'
 import type { Account } from '../api/accounts'
