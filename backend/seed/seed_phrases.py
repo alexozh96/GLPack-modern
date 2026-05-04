@@ -18,7 +18,10 @@ def seed_phrases(session=None) -> int:
     try:
         table = DBF(str(DBF_PATH), encoding="cp437", load=True)
 
-        seen: set[tuple] = set()
+        seen: set[tuple] = {
+            (p.phrase, p.dr_code, p.cr_code)
+            for p in session.query(Phrase).all()
+        }
         count = 0
         for record in table:
             phrase = (record.get("PHRASE") or "").strip()
