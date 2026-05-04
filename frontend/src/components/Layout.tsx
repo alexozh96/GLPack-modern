@@ -145,8 +145,10 @@ export function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-8">
-          <Outlet />
+        <main className="flex-1 overflow-auto">
+          <div className="max-w-7xl mx-auto px-8 py-8">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

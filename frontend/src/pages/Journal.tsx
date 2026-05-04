@@ -58,7 +58,7 @@ function Combobox({ value, onChange, options, placeholder, inputClass = '' }: {
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className={`border border-slate-200 rounded-lg px-2.5 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors ${inputClass}`}
+        className={`border border-slate-200 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors ${inputClass}`}
       />
       {open && visible.length > 0 && (
         <div className="absolute z-20 top-full left-0 mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg max-h-44 overflow-y-auto min-w-full">
@@ -204,7 +204,7 @@ export function Journal() {
 
   if (view === 'form') {
     return (
-      <div className="space-y-5 max-w-4xl">
+      <div className="space-y-5 max-w-5xl">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setView('list')}
@@ -212,39 +212,39 @@ export function Journal() {
           >
             ← Back
           </button>
-          <h2 className="text-xl font-bold text-slate-800">
+          <h2 className="text-2xl font-bold text-slate-800">
             {editingTrxNo ? `Edit Entry — ${editingTrxNo}` : 'New Journal Entry'}
           </h2>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-8 space-y-6 shadow-sm">
           {/* Date */}
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-slate-700 w-14 shrink-0">Date</label>
+            <label className="text-sm font-semibold text-slate-600 w-16 shrink-0">Date</label>
             <input
               type="date"
               value={formDate}
               onChange={e => setFormDate(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+              className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
             />
           </div>
 
           {/* Lines table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[680px]">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="pb-2.5 pr-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-36">Account</th>
-                  <th className="pb-2.5 pr-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Particular</th>
-                  <th className="pb-2.5 pr-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Debit</th>
-                  <th className="pb-2.5 pr-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Credit</th>
-                  <th className="pb-2.5 w-6" />
+                  <th className="py-3 pr-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-44">Account</th>
+                  <th className="py-3 pr-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Particular</th>
+                  <th className="py-3 pr-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide w-32">Debit</th>
+                  <th className="py-3 pr-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide w-32">Credit</th>
+                  <th className="py-3 w-8" />
                 </tr>
               </thead>
               <tbody>
                 {rows.map(row => (
                   <tr key={row.key} className="align-top">
-                    <td className="pr-2 py-1.5">
+                    <td className="pr-3 py-2">
                       <Combobox
                         value={row.account}
                         onChange={v => setRow(row.key, { account: v.toUpperCase().slice(0, 4) })}
@@ -253,7 +253,7 @@ export function Journal() {
                         inputClass="font-mono"
                       />
                     </td>
-                    <td className="pr-2 py-1.5">
+                    <td className="pr-3 py-2">
                       <Combobox
                         value={row.particular}
                         onChange={v => setRow(row.key, { particular: v.slice(0, 45) })}
@@ -261,28 +261,28 @@ export function Journal() {
                         placeholder="Description"
                       />
                     </td>
-                    <td className="pr-2 py-1.5">
+                    <td className="pr-3 py-2">
                       <input
                         type="number" min="0" step="0.01" value={row.dr}
                         onChange={e => setRow(row.key, { dr: e.target.value, cr: e.target.value ? '' : row.cr })}
                         placeholder="0.00"
-                        className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
                       />
                     </td>
-                    <td className="pr-2 py-1.5">
+                    <td className="pr-3 py-2">
                       <input
                         type="number" min="0" step="0.01" value={row.cr}
                         onChange={e => setRow(row.key, { cr: e.target.value, dr: e.target.value ? '' : row.dr })}
                         placeholder="0.00"
-                        className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
                       />
                     </td>
-                    <td className="py-1.5 pl-1">
+                    <td className="py-2 pl-1">
                       {rows.length > 1 && (
                         <button
                           onClick={() => removeRow(row.key)}
                           title="Remove line"
-                          className="text-slate-300 hover:text-red-500 text-xl leading-none transition-colors"
+                          className="w-7 h-7 flex items-center justify-center rounded text-slate-300 hover:text-red-500 hover:bg-red-50 text-lg leading-none transition-colors"
                         >×</button>
                       )}
                     </td>
@@ -349,8 +349,8 @@ export function Journal() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Journal Entries</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}</p>
+          <h2 className="text-2xl font-bold text-slate-800">Journal Entries</h2>
+          <p className="text-sm text-slate-400 mt-1">{entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}</p>
         </div>
         {canWrite && (
           <button
