@@ -32,3 +32,10 @@ Next phase: Phase 7 — Frontend Shell
 - Admin-only write controls (access_level >= 6). API errors surfaced in UI.
 - Vite build clean (0 errors, 88 modules).
 
+
+## Phase 9 — Journal Entry UI (2026-05-04)
+- Built full journal entry workflow: list with date filter, create/edit form with dynamic rows.
+- Account combobox (code+name filter) and particular combobox (phrases with dr/cr hints).
+- Live balance indicator; Save disabled until balanced. Entering Dr clears Cr on same row.
+- Vite build clean (0 errors, 90 modules).
+
