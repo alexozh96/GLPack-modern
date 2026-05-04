@@ -1,74 +1,75 @@
-=== CHECKPOINT 14 ===
+=== CHECKPOINT 15 ===
 
 Phase completed:
-Phase 14 — Bank Reconciliation
+Phase 15 — Modern Improvements (partial: CSV import + global search; multi-company deferred)
 
 Completed:
-- Phase 0–13 completed prior.
-- Backend BankRow model (models/reconciliation.py):
-  - Fields: id, date, description, amount (Numeric 12,2), matched_ledger_id (FK ledger.id,
-    nullable, unique for 1-to-1 match), imported_at (DateTime, server_default=now).
-- Backend schemas (schemas/reconciliation.py):
-  - BankRowRead, GlEntryRead, MatchedPairRead, MatchIn, ImportResult, ReconcSummary.
-- Backend router (routers/reconciliation.py — prefix /reconciliation):
-  - POST /import: multipart CSV upload (WriteAccess); parses date/description/amount columns
-    (case-insensitive header, multi-format date parsing, strips currency symbols from amounts).
-  - GET /unmatched: bank rows where matched_ledger_id IS NULL.
-  - GET /matched: joined bank_rows + ledger where matched_ledger_id IS NOT NULL.
-  - GET /gl-cash: ledger entries for CB* accounts not referenced by any bank row.
-  - POST /match: links bank row to ledger entry (409 if either already matched).
-  - DELETE /match/{bank_row_id}: clears matched_ledger_id.
-  - GET /summary: total/matched/unmatched counts.
-- models/__init__.py: BankRow registered.
-- app/main.py: reconciliation router included.
-- Frontend api/reconciliation.ts: all 7 API functions with full TypeScript types.
-- Frontend pages/BankReconciliation.tsx (rewrite from placeholder):
-  - Summary bar (total/matched/unmatched badges).
-  - CSV import button with file picker; success/error message (WriteAccess only).
-  - Two-column selection: unmatched bank rows (left) / unmatched GL cash entries (right).
-    Click to select/deselect; selected row highlighted with blue left border.
-  - Match Selected button (enabled when one of each selected); error banner on failure.
-  - Matched pairs table at bottom: bank date/desc/amount, GL trx/particular/dr-cr,
-    Unmatch button per row (WriteAccess only).
-  - Promise.allSettled for graceful loading; 80-unit max-height scroll on selection columns.
-- backend/tests/test_reconciliation.py: 8 tests covering import, unmatched, GL cash,
-  match/unmatch, duplicate match rejection, and summary counts.
+- Phase 0–14 completed prior.
+- Feature 1: CSV Bulk Import (POST /ledger/import-csv):
+  - Accepts multipart CSV with columns: date, trx_no, account, particular, dr_amount, cr_amount
+    (case-insensitive headers, comma-stripped amounts).
+  - All-or-nothing validation: parse errors, unbalanced trx_no groups, unknown accounts,
+    duplicate trx_no conflicts with existing DB entries, and period lock all checked before
+    any insert. Errors returned as list[str] in HTTP 422 detail.
+  - Returns { imported_rows, imported_transactions } on success.
+  - WriteAccess required.
+  - 7 tests in test_ledger_import.py covering all error paths and happy path.
+- Feature 2: Global Search (GET /search?q=):
+  - Searches accounts (code + name ILIKE), phrases (phrase ILIKE), ledger particulars
+    (grouped by trx_no). Minimum query length: 2 chars. Default limit: 8 per category.
+  - New schemas/search.py: AccountResult, PhraseResult, JournalResult, SearchResult.
+  - New routers/search.py with GET /search; included in main.py.
+  - 6 tests in test_search.py.
+  - Frontend api/search.ts: search(q) → SearchResult.
+  - Frontend components/GlobalSearch.tsx:
+    - Search input in top bar (replaces static header text).
+    - 300ms debounce; results popover opens automatically.
+    - Grouped results: Accounts, Journal Entries, Phrases.
+    - Click account → /accounts; click journal entry → /journal with openTrx state;
+      click phrase → /settings.
+    - Ctrl+K / Cmd+K keyboard shortcut to focus; Escape to close; click-outside to close.
+    - Total result count footer.
+  - Layout.tsx updated: GlobalSearch replaces "General Ledger Accounting System" text.
+
+Deferred (multi-company):
+- Adding company_id to all data tables (ledger, accounts, phrases, setup, etc.) is a
+  destructive migration requiring changes to every model, router, and test. Requires
+  explicit approval before proceeding. All existing queries would need company_id filters.
 
 Files changed:
-- backend/app/main.py (modified — reconciliation router added)
-- backend/app/models/__init__.py (modified — BankRow registered)
-- backend/app/models/reconciliation.py (new)
-- backend/app/routers/reconciliation.py (new)
-- backend/app/schemas/reconciliation.py (new)
-- backend/tests/test_reconciliation.py (new)
-- frontend/src/api/reconciliation.ts (new)
-- frontend/src/pages/BankReconciliation.tsx (rewrite)
+- backend/app/main.py (modified — search router added)
+- backend/app/routers/ledger.py (modified — POST /ledger/import-csv added)
+- backend/app/routers/search.py (new)
+- backend/app/schemas/search.py (new)
+- backend/tests/test_ledger_import.py (new)
+- backend/tests/test_search.py (new)
+- frontend/src/api/search.ts (new)
+- frontend/src/components/GlobalSearch.tsx (new)
+- frontend/src/components/Layout.tsx (modified — GlobalSearch in header)
 
 Validation performed:
-- uv run pytest backend/tests/ -q: 180/180 passed
+- uv run pytest backend/tests/ -q: 193/193 passed
 - npx tsc --noEmit: 0 errors
-- npx vite build: ✓ 95 modules, 0 errors, built in 219ms
+- npx vite build: ✓ 97 modules, 0 errors, built in 190ms
 
 System state:
-- All frontend pages fully implemented: Dashboard, Accounts, Journal, Ledger, Reports,
-  Settings, Bank Reconciliation.
-- Full accounting workflow complete end-to-end.
-
-Known issues / deferred items:
-- Token expiry / 401 auto-logout still deferred.
-- Phrases management UI not yet implemented (backend /phrases exists).
-- GL cash query only matches CB* prefix accounts; extend if other cash accounts are used.
+- All frontend pages fully implemented.
+- CSV bulk import available at POST /ledger/import-csv.
+- Global search in top bar, Ctrl+K shortcut.
+- Phrases management UI still not implemented (backend /phrases exists).
+- Multi-company deferred.
 
 Key constraints:
 - Do NOT modify backend unless there is a clear API mismatch.
 - Do NOT modify report calculation logic unless fixing a clearly proven bug.
+- Do NOT implement multi-company without explicit user approval.
 - Do NOT reload the full GLPACK_DOCUMENTATION.md by default.
 - Do NOT scan the entire project unless explicitly required.
 
 Next phase:
-Phase 15 — Phrases Management UI
+Phase 16 — Phrases Management UI
 
 Next task:
-- Build Phrases management page within Settings or as standalone: list all phrases (with
-  dr_code/cr_code), create new phrase (account selectors for dr/cr), delete. Uses existing
-  GET/POST/DELETE /phrases backend endpoints.
+- Build Phrases management page: list all phrases (phrase, dr_code, cr_code), create new
+  (with account selector dropdowns for dr/cr codes), delete. Uses GET/POST/DELETE /phrases.
+  Can be a tab within Settings or a standalone route.

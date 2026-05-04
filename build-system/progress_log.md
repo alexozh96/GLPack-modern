@@ -61,6 +61,15 @@ Next phase: Phase 7 — Frontend Shell
 - Vite build clean (0 errors, 92 modules).
 
 
+## Phase 15 — Modern Improvements (2026-05-04)
+- CSV bulk import: POST /ledger/import-csv accepts date/trx_no/account/particular/dr/cr CSV,
+  all-or-nothing validation (parse, balance, accounts, duplicates, period lock), 7 tests.
+- Global search: GET /search?q= across accounts, ledger particulars, phrases; grouped results
+  popover in header with Ctrl+K shortcut, 300ms debounce, click-to-navigate. 6 tests.
+- Multi-company deferred (destructive migration requiring explicit approval).
+- Pytest: 193/193 passed. Vite build: 97 modules, 0 errors.
+
+
 ## Phase 14 — Bank Reconciliation (2026-05-04)
 - Backend: BankRow model (date, description, amount, matched_ledger_id FK, imported_at).
   7 endpoints: CSV import (multi-format date/amount parsing), unmatched bank rows, matched pairs
