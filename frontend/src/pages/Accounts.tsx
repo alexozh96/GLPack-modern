@@ -26,6 +26,8 @@ function apiErrorMessage(err: unknown): string {
   return 'An unexpected error occurred.'
 }
 
+const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors'
+
 export function Accounts() {
   const { user } = useAuth()
   const isAdmin = (user?.access_level ?? 0) >= 6
@@ -68,23 +70,16 @@ export function Accounts() {
   }, [accounts, search, prefix])
 
   function openCreate() {
-    setFormCode('')
-    setFormName('')
-    setFormError(null)
+    setFormCode(''); setFormName(''); setFormError(null)
     setModal({ mode: 'create' })
   }
 
   function openEdit(account: Account) {
-    setFormCode(account.code)
-    setFormName(account.name)
-    setFormError(null)
+    setFormCode(account.code); setFormName(account.name); setFormError(null)
     setModal({ mode: 'edit', account })
   }
 
-  function closeModal() {
-    setModal(null)
-    setFormError(null)
-  }
+  function closeModal() { setModal(null); setFormError(null) }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -93,10 +88,10 @@ export function Accounts() {
     try {
       if (modal?.mode === 'create') {
         const created = await createAccount(formCode, formName)
-        setAccounts((prev) => [...prev, created].sort((a, b) => a.code.localeCompare(b.code)))
+        setAccounts(prev => [...prev, created].sort((a, b) => a.code.localeCompare(b.code)))
       } else if (modal?.mode === 'edit' && modal.account) {
         const updated = await updateAccount(modal.account.code, formName)
-        setAccounts((prev) => prev.map((a) => (a.code === updated.code ? updated : a)))
+        setAccounts(prev => prev.map(a => a.code === updated.code ? updated : a))
       }
       closeModal()
     } catch (err) {
@@ -110,10 +105,9 @@ export function Accounts() {
     setDeleteBusy(true)
     try {
       await deleteAccount(account.code)
-      setAccounts((prev) => prev.filter((a) => a.code !== account.code))
+      setAccounts(prev => prev.filter(a => a.code !== account.code))
       setDeleteTarget(null)
     } catch (err) {
-      // show error inline by keeping the delete target and surfacing a message
       setDeleteTarget(null)
       setLoadError(apiErrorMessage(err))
     } finally {
@@ -122,14 +116,17 @@ export function Accounts() {
   }
 
   return (
-    <div>
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-slate-800">Chart of Accounts</h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Chart of Accounts</h2>
+          <p className="text-xs text-slate-400 mt-0.5">{accounts.length} accounts total</p>
+        </div>
         {isAdmin && (
           <button
             onClick={openCreate}
-            className="bg-slate-800 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors"
+            className="bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors"
           >
             + New Account
           </button>
@@ -137,28 +134,27 @@ export function Accounts() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 flex-wrap">
         <input
           type="text"
           placeholder="Search code or name…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-slate-400"
+          onChange={e => setSearch(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
         />
         <select
           value={prefix}
-          onChange={(e) => setPrefix(e.target.value)}
-          className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          onChange={e => setPrefix(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors bg-white"
         >
-          {PREFIX_OPTIONS.map((o) => (
+          {PREFIX_OPTIONS.map(o => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
       </div>
 
-      {/* Error banner */}
       {loadError && (
-        <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
+        <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
           {loadError}
         </div>
       )}
@@ -166,56 +162,48 @@ export function Accounts() {
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="p-6 text-center text-slate-400 text-sm">Loading…</div>
+          <div className="p-8 text-center text-slate-400 text-sm">Loading…</div>
         ) : filtered.length === 0 ? (
-          <div className="p-6 text-center text-slate-400 text-sm">No accounts found.</div>
+          <div className="p-8 text-center text-slate-400 text-sm">No accounts found.</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-24">Code</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600">Name</th>
-                {isAdmin && <th className="w-28" />}
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-24">Code</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</th>
+                {isAdmin && <th className="w-32" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((account) => (
-                <tr key={account.code} className="hover:bg-slate-50">
-                  <td className="px-4 py-2.5 font-mono text-slate-700">{account.code}</td>
-                  <td className="px-4 py-2.5 text-slate-800">{account.name}</td>
+              {filtered.map(account => (
+                <tr key={account.code} className="hover:bg-[#0875e1]/[0.03] transition-colors">
+                  <td className="px-5 py-3.5 font-mono text-slate-700 text-sm">{account.code}</td>
+                  <td className="px-4 py-3.5 text-slate-800 text-sm">{account.name}</td>
                   {isAdmin && (
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3.5 text-right">
                       {deleteTarget?.code === account.code ? (
-                        <span className="flex items-center gap-2 text-xs">
+                        <span className="flex items-center gap-2 text-xs justify-end">
                           <span className="text-slate-500">Delete?</span>
                           <button
                             onClick={() => handleDelete(account)}
                             disabled={deleteBusy}
-                            className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
-                          >
-                            Yes
-                          </button>
+                            className="text-red-600 hover:text-red-800 font-semibold disabled:opacity-50"
+                          >Yes</button>
                           <button
                             onClick={() => setDeleteTarget(null)}
-                            className="text-slate-500 hover:text-slate-700"
-                          >
-                            No
-                          </button>
+                            className="text-slate-400 hover:text-slate-600"
+                          >No</button>
                         </span>
                       ) : (
-                        <span className="flex items-center gap-3 justify-end">
+                        <span className="flex items-center gap-4 justify-end">
                           <button
                             onClick={() => openEdit(account)}
-                            className="text-slate-500 hover:text-slate-800 text-xs"
-                          >
-                            Edit
-                          </button>
+                            className="text-xs text-slate-400 hover:text-[#0875e1] font-medium transition-colors"
+                          >Edit</button>
                           <button
                             onClick={() => setDeleteTarget(account)}
-                            className="text-red-400 hover:text-red-600 text-xs"
-                          >
-                            Delete
-                          </button>
+                            className="text-xs text-slate-400 hover:text-red-600 font-medium transition-colors"
+                          >Delete</button>
                         </span>
                       )}
                     </td>
@@ -226,59 +214,60 @@ export function Accounts() {
           </table>
         )}
       </div>
-
-      <p className="mt-2 text-xs text-slate-400">{filtered.length} account{filtered.length !== 1 ? 's' : ''}</p>
+      <p className="text-xs text-slate-400">{filtered.length} account{filtered.length !== 1 ? 's' : ''} shown</p>
 
       {/* Create / Edit Modal */}
       {modal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm space-y-5">
-            <h3 className="text-lg font-semibold text-slate-800">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm space-y-5">
+            <h3 className="text-lg font-bold text-slate-800">
               {modal.mode === 'create' ? 'New Account' : 'Edit Account'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Code <span className="text-slate-400 font-normal">(1–4 chars)</span>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Code <span className="text-slate-400 font-normal text-xs">(1–4 chars)</span>
                 </label>
                 <input
                   type="text"
                   value={formCode}
-                  onChange={(e) => setFormCode(e.target.value.toUpperCase().slice(0, 4))}
+                  onChange={e => setFormCode(e.target.value.toUpperCase().slice(0, 4))}
                   disabled={modal.mode === 'edit'}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:bg-slate-100 disabled:text-slate-500"
+                  className={`${inputCls} font-mono disabled:bg-slate-50 disabled:text-slate-400`}
                   required
                   autoFocus={modal.mode === 'create'}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Name <span className="text-slate-400 font-normal">(max 30 chars)</span>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Name <span className="text-slate-400 font-normal text-xs">(max 30 chars)</span>
                 </label>
                 <input
                   type="text"
                   value={formName}
-                  onChange={(e) => setFormName(e.target.value.slice(0, 30))}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  onChange={e => setFormName(e.target.value.slice(0, 30))}
+                  className={inputCls}
                   required
                   autoFocus={modal.mode === 'edit'}
                 />
               </div>
               {formError && (
-                <p className="text-red-500 text-sm">{formError}</p>
+                <div className="px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {formError}
+                </div>
               )}
               <div className="flex gap-3 pt-1">
                 <button
                   type="submit"
                   disabled={formBusy}
-                  className="flex-1 bg-slate-800 text-white rounded-lg py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 bg-[#0875e1] hover:bg-[#0667c8] text-white rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors shadow-sm"
                 >
                   {formBusy ? 'Saving…' : 'Save'}
                 </button>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 border border-slate-300 text-slate-700 rounded-lg py-2 text-sm hover:bg-slate-50 transition-colors"
+                  className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>

@@ -30,7 +30,26 @@
       "Bash(python -m pytest tests/test_auth.py tests/test_users.py -v)",
       "Bash(git commit *)",
       "Bash(npx tsc *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(npm run *)",
+      "Bash(ping -n 3 127.0.0.1)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(echo.)",
+      "Bash(curl -s -X POST http://localhost:8000/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"admin\\\\\",\\\\\"password\\\\\":\\\\\"admin123\\\\\"}\")",
+      "Bash(set TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwianRpIjoiYWIyNDViNTgtMzY0Zi00YTZlLWJhNjktMTQxY2JhZWVjMDEzIiwiZXhwIjoxNzc3OTIzNTQ2fQ.oQzPjqzyd4ddtJizZmC6w0vpheSmJc1Ny5tt1NYDNII)",
+      "Bash(curl -s http://localhost:8000/auth/me -H \"Authorization: Bearer %TOKEN%\")",
+      "Bash(curl -s -X POST http://localhost:8000/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin\"}')",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(python *)",
+      "Bash(curl -s -X POST http://localhost:8000/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(curl -s http://localhost:5173)",
+      "PowerShell(cd C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\frontend; Start-Process -NoNewWindow -FilePath \"npm\" -ArgumentList \"run\",\"dev\" -RedirectStandardOutput \"$env:TEMP\\\\vite_out.txt\" -RedirectStandardError \"$env:TEMP\\\\vite_err.txt\")",
+      "PowerShell(cd C:\\\\Users\\\\Alex\\\\OneDrive\\\\Documents\\\\glpack-modern\\\\frontend; Start-Process -NoNewWindow -FilePath \"cmd.exe\" -ArgumentList \"/c\",\"npm run dev > $env:TEMP\\\\vite_out.txt 2>&1\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "PowerShell(Start-Process \"http://localhost:5173\")",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s -X POST http://localhost:8000/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"wrongpass\"}')"
     ]
   }
 }

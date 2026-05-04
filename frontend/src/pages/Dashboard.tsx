@@ -5,8 +5,6 @@ import { getProfitLoss } from '../api/reports'
 import { listJournals } from '../api/journal'
 import type { JournalSummary } from '../api/journal'
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
 function thisYear() {
   const y = new Date().getFullYear()
   return { start: `${y}-01-01`, end: new Date().toISOString().slice(0, 10) }
@@ -23,14 +21,12 @@ function monthLabel(yyyymm: string): string {
   return d.toLocaleString(undefined, { month: 'short' })
 }
 
-// ── sub-components ────────────────────────────────────────────────────────────
-
 function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5">
-      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{label}</p>
+    <div className="bg-white border border-slate-200 rounded-xl p-6">
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">{label}</p>
       <p className="text-2xl font-bold text-slate-800 font-mono">{value}</p>
-      {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-slate-400 mt-1.5">{sub}</p>}
     </div>
   )
 }
@@ -40,14 +36,12 @@ function QuickAction({ label, onClick, disabled }: { label: string; onClick: () 
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full text-left px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      className="w-full text-left px-4 py-3.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-[#0875e1]/40 hover:bg-[#0875e1]/[0.03] hover:text-[#0875e1] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
     >
       {label}
     </button>
   )
 }
-
-// ── main page ─────────────────────────────────────────────────────────────────
 
 export function Dashboard() {
   const { user } = useAuth()
@@ -64,13 +58,11 @@ export function Dashboard() {
 
   useEffect(() => {
     const { start, end } = thisYear()
-
     Promise.allSettled([
       getProfitLoss(start, end),
       listJournals({ from_date: start }),
     ]).then(([plRes, jRes]) => {
       let anyFailed = false
-
       if (plRes.status === 'fulfilled') {
         const pl = plRes.value
         const rev = parseFloat(pl.total_revenue) || 0
@@ -85,16 +77,12 @@ export function Dashboard() {
       } else {
         anyFailed = true
       }
-
       if (jRes.status === 'fulfilled') {
         const entries = jRes.value
-        // Recent entries: sort desc by date then trx_no, take top 8
         const sorted = [...entries].sort(
           (a, b) => b.date.localeCompare(a.date) || b.trx_no.localeCompare(a.trx_no),
         )
         setRecentEntries(sorted.slice(0, 8))
-
-        // Monthly totals (group by YYYY-MM, last 12 months)
         const monthMap = new Map<string, number>()
         entries.forEach(e => {
           const key = e.date.slice(0, 7)
@@ -104,13 +92,10 @@ export function Dashboard() {
           .sort((a, b) => a[0].localeCompare(b[0]))
           .slice(-12)
         setMonthlyData(months.map(([m, total]) => ({ month: m, total })))
-
-        // Patch entry count into KPIs if P&L succeeded
         setKpis(prev => prev ? { ...prev, entries: entries.length } : null)
       } else {
         anyFailed = true
       }
-
       setPartial(anyFailed)
     }).finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -119,14 +104,16 @@ export function Dashboard() {
   const { start: yearStart } = thisYear()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-800">Dashboard</h2>
-        <span className="text-xs text-slate-400">YTD — {yearStart} to today</span>
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Dashboard</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Year to date — {yearStart} to today</p>
+        </div>
       </div>
 
       {partial && (
-        <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg">
+        <div className="px-4 py-3 bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg">
           Some data could not be loaded. Is the backend running?
         </div>
       )}
@@ -135,22 +122,22 @@ export function Dashboard() {
       {loading ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 h-24 animate-pulse bg-slate-50" />
+            <div key={i} className="bg-white border border-slate-200 rounded-xl p-6 h-28 animate-pulse" />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <KpiCard label="Total Revenue" value={kpis?.revenue ?? '—'} sub="Year to date" />
-          <KpiCard label="Gross Profit %" value={kpis?.grossPct ?? '—'} sub="Of revenue" />
-          <KpiCard label="Net Profit" value={kpis?.netProfit ?? '—'} sub="After tax" />
-          <KpiCard label="Journal Entries" value={kpis ? String(kpis.entries) : '—'} sub="This year" />
+          <KpiCard label="Total Revenue"    value={kpis?.revenue ?? '—'}            sub="Year to date" />
+          <KpiCard label="Gross Profit %"   value={kpis?.grossPct ?? '—'}           sub="Of revenue"   />
+          <KpiCard label="Net Profit"       value={kpis?.netProfit ?? '—'}          sub="After tax"    />
+          <KpiCard label="Journal Entries"  value={kpis ? String(kpis.entries) : '—'} sub="This year" />
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Monthly activity chart */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Monthly Transaction Volume</h3>
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-6">
+          <h3 className="text-sm font-semibold text-slate-700 mb-5">Monthly Transaction Volume</h3>
           {monthlyData.length === 0 ? (
             <div className="flex items-center justify-center h-28 text-slate-400 text-sm">
               No data available
@@ -159,21 +146,21 @@ export function Dashboard() {
             <>
               <div className="flex items-end gap-1 h-28">
                 {monthlyData.map(({ month, total }) => {
-                  const pct = (total / maxMonthly) * 100
+                  const p = (total / maxMonthly) * 100
                   return (
                     <div key={month} className="flex-1 flex flex-col items-center justify-end">
                       <div
                         title={`${month}: ${fmtAmt(total)}`}
-                        className="w-full bg-slate-600 rounded-t-sm hover:bg-slate-500 transition-colors cursor-default"
-                        style={{ height: `${Math.max(pct, 3)}%` }}
+                        className="w-full bg-[#0875e1] rounded-t hover:bg-[#0667c8] transition-colors cursor-default opacity-80 hover:opacity-100"
+                        style={{ height: `${Math.max(p, 3)}%` }}
                       />
                     </div>
                   )
                 })}
               </div>
-              <div className="flex gap-1 mt-1.5">
+              <div className="flex gap-1 mt-2">
                 {monthlyData.map(({ month }) => (
-                  <div key={month} className="flex-1 text-center text-xs text-slate-400">
+                  <div key={month} className="flex-1 text-center text-[10px] text-slate-400">
                     {monthLabel(month)}
                   </div>
                 ))}
@@ -183,37 +170,24 @@ export function Dashboard() {
         </div>
 
         {/* Quick actions */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h3>
+        <div className="bg-white border border-slate-200 rounded-xl p-6">
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">Quick Actions</h3>
           <div className="space-y-2">
-            <QuickAction
-              label="→ New Journal Entry"
-              onClick={() => navigate('/journal')}
-              disabled={!canWrite}
-            />
-            <QuickAction
-              label="→ Chart of Accounts"
-              onClick={() => navigate('/accounts')}
-            />
-            <QuickAction
-              label="→ Trial Balance"
-              onClick={() => navigate('/reports')}
-            />
-            <QuickAction
-              label="→ Financial Statements"
-              onClick={() => navigate('/reports')}
-            />
+            <QuickAction label="New Journal Entry"      onClick={() => navigate('/journal')}  disabled={!canWrite} />
+            <QuickAction label="Chart of Accounts"     onClick={() => navigate('/accounts')} />
+            <QuickAction label="Trial Balance"         onClick={() => navigate('/reports')}  />
+            <QuickAction label="Financial Statements"  onClick={() => navigate('/reports')}  />
           </div>
         </div>
       </div>
 
       {/* Recent journal entries */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700">Recent Journal Entries</h3>
           <button
             onClick={() => navigate('/journal')}
-            className="text-xs text-slate-400 hover:text-slate-700"
+            className="text-xs text-[#0875e1] hover:text-[#0667c8] font-medium"
           >
             View all →
           </button>
@@ -226,10 +200,10 @@ export function Dashboard() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-20">TRX</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-28">Date</th>
-                <th className="text-left px-4 py-2.5 font-medium text-slate-600">Description</th>
-                <th className="text-right px-4 py-2.5 font-medium text-slate-600 w-28">Amount</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-20">TRX</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Description</th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -237,12 +211,12 @@ export function Dashboard() {
                 <tr
                   key={e.trx_no}
                   onClick={() => navigate('/journal')}
-                  className="hover:bg-slate-50 cursor-pointer"
+                  className="hover:bg-[#0875e1]/[0.03] cursor-pointer transition-colors"
                 >
-                  <td className="px-4 py-2.5 font-mono text-slate-600">{e.trx_no}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{e.date}</td>
-                  <td className="px-4 py-2.5 text-slate-700 truncate max-w-xs">{e.description}</td>
-                  <td className="px-4 py-2.5 text-right font-mono text-slate-700">{fmtAmt(e.total_dr)}</td>
+                  <td className="px-5 py-3.5 font-mono text-slate-600 text-sm">{e.trx_no}</td>
+                  <td className="px-4 py-3.5 text-slate-500 text-sm">{e.date}</td>
+                  <td className="px-4 py-3.5 text-slate-700 text-sm truncate max-w-xs">{e.description}</td>
+                  <td className="px-5 py-3.5 text-right font-mono text-slate-700 text-sm">{fmtAmt(e.total_dr)}</td>
                 </tr>
               ))}
             </tbody>
