@@ -61,6 +61,15 @@ Next phase: Phase 7 — Frontend Shell
 - Vite build clean (0 errors, 92 modules).
 
 
+## Phase 16 — Testing & Polish (2026-05-04)
+- Backend: 6 new tests — 3 period lock guard (PUT/DELETE → 403, post-lock editable),
+  3 P&L correctness (net profit 4500 from seeded data, pct_of_revenue, zero-revenue safety).
+- Frontend: toast notification system (ToastProvider, useToast hook, auto-dismiss 4s);
+  Journal wires 403 locked-period errors to toast; 404 page with dashboard link.
+- README.md: full setup guide (install, run, default logins, structure, troubleshooting).
+- Pytest: 199/199 passed. Vite build: 99 modules, 0 errors.
+
+
 ## Phase 15 — Modern Improvements (2026-05-04)
 - CSV bulk import: POST /ledger/import-csv accepts date/trx_no/account/particular/dr/cr CSV,
   all-or-nothing validation (parse, balance, accounts, duplicates, period lock), 7 tests.

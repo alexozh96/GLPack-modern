@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import { listJournals, getJournal, createJournal, updateJournal, deleteJournal } from '../api/journal'
 import { listAccounts } from '../api/accounts'
 import { listPhrases } from '../api/phrases'
@@ -90,6 +91,7 @@ export function Journal() {
   const { user } = useAuth()
   const location = useLocation()
   const canWrite = (user?.access_level ?? 0) >= 3
+  const toast = useToast()
 
   // view
   const [view, setView] = useState<'list' | 'form'>('list')
@@ -176,8 +178,12 @@ export function Journal() {
       setEntries(prev => prev.filter(e => e.trx_no !== trxNo))
       setDeleteTarget(null)
     } catch (err) {
-      setListError(apiError(err))
+      const msg = apiError(err)
+      setListError(msg)
       setDeleteTarget(null)
+      if ((err as { response?: { status?: number } })?.response?.status === 403) {
+        toast.error('This entry is in a locked period and cannot be deleted.')
+      }
     } finally {
       setDeleteBusy(false)
     }
@@ -242,7 +248,11 @@ export function Journal() {
       setView('list')
       loadList()
     } catch (err) {
-      setFormError(apiError(err))
+      const msg = apiError(err)
+      setFormError(msg)
+      if ((err as { response?: { status?: number } })?.response?.status === 403) {
+        toast.error('This entry is in a locked period and cannot be edited.')
+      }
     } finally {
       setFormBusy(false)
     }
