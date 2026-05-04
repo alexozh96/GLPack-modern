@@ -46,3 +46,10 @@ Next phase: Phase 7 — Frontend Shell
 - TRX click navigates to journal edit form via React Router location state.
 - Vite build clean (0 errors, 92 modules).
 
+
+## Phase 11 — Reports UI (2026-05-04)
+- Built full Reports page: 7 tabs, shared period picker, Generate + PDF export per tab, Download All button.
+- Dedicated renderer per report type with shared table building blocks.
+- Updated api/reports.ts with all 7 report types, JSON fetchers, and generic PDF downloader.
+- Vite build clean (0 errors, 92 modules).
+

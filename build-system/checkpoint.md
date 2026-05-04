@@ -1,46 +1,47 @@
-=== CHECKPOINT 10 ===
+=== CHECKPOINT 11 ===
 
 Phase completed:
-Phase 10 — Ledger View UI
+Phase 11 — Reports UI
 
 Completed:
-- Phase 0–9 completed prior.
-- api/ledger.ts: getLedger (GET /ledger with account, from_date, to_date params).
-- api/reports.ts: downloadLedgerPdf (GET /reports/ledger-account/{code}?format=pdf, blob download).
-- Ledger page (pages/Ledger.tsx):
-  - Account selector (select dropdown populated from GET /accounts).
-  - From/to date filters + Load button.
-  - Account name subtitle shown when account is selected.
-  - Transaction table: Date, TRX (clickable), Particular, Debit, Credit, Running Balance.
-  - Balance column: absolute value + Dr (blue) / Cr (amber) label based on sign.
-  - Totals footer: summed debit and credit columns.
-  - Empty state placeholder before first load.
-  - PDF Export button (visible when account + both dates set); triggers blob download.
-- Journal.tsx (minimal addition):
-  - Added useLocation import.
-  - Added useEffect that reads location.state.openTrx on mount and auto-opens the edit form
-    for that TRX; clears history state after opening to prevent re-trigger on back-navigation.
-  - TRX click in Ledger navigates to /journal with { state: { openTrx } }.
+- Phase 0–10 completed prior.
+- api/reports.ts (updated):
+  - All 7 report TypeScript types (TrialBalanceReport, ProfitLossReport, BalanceSheetReport,
+    ExpenseScheduleReport, DebtorsListingReport, CreditorsListingReport, FixedAssetsReport).
+  - JSON fetchers: getTrialBalance, getProfitLoss, getBalanceSheet, getExpenseSchedule,
+    getDebtorsListing, getCreditorsListing, getFixedAssets.
+  - Generic downloadReportPdf(key, ps, pe) covers all 7 report PDF exports.
+  - downloadFullStatementsPdf(ps, pe) for full financial statements bundle.
+  - downloadLedgerPdf refactored to use shared blobDownload helper (no behaviour change).
+- Reports page (pages/Reports.tsx):
+  - 7 tabs: Trial Balance, Profit & Loss, Balance Sheet, Expense Schedule,
+    Debtors Listing, Creditors Listing, Fixed Assets.
+  - Shared period_start / period_end date pickers.
+  - Generate button (disabled until both dates set); fetches JSON for active tab.
+  - Export PDF button (visible after report is generated); downloads PDF for active tab.
+  - Download All (PDF) button in header (visible when dates set); downloads full statements.
+  - Switching tabs clears report data (user must re-generate).
+  - Dedicated renderer per report type: TrialBalanceView, ProfitLossView,
+    BalanceSheetView, ExpenseScheduleView, SimpleListingView, FixedAssetsView.
+  - Shared table building blocks: Th, SectionHead, DataRow, TotalRow, SummaryRow.
+  - API error messages surfaced in error banner.
 
 Files changed:
-- frontend/src/api/ledger.ts (new)
-- frontend/src/api/reports.ts (new)
-- frontend/src/pages/Ledger.tsx (rewrite — was placeholder)
-- frontend/src/pages/Journal.tsx (minimal addition — useLocation + openTrx effect)
+- frontend/src/api/reports.ts (extended — kept downloadLedgerPdf, added all types and functions)
+- frontend/src/pages/Reports.tsx (rewrite — was placeholder)
 
 Validation performed:
 - npx tsc --noEmit: 0 errors
-- npx vite build: ✓ 92 modules, 0 errors, built in 183ms
+- npx vite build: ✓ 92 modules, 0 errors, built in 202ms
 
 System state:
 - Backend API unchanged (no modifications).
-- Ledger view wired to GET /ledger.
-- PDF export wired to GET /reports/ledger-account/{code}?format=pdf.
-- TRX click in ledger navigates to journal entry edit form.
+- All 7 financial reports wired to GET /reports/* endpoints.
+- PDF exports use blob download via shared blobDownload helper.
+- Full financial statements bundle via GET /reports/full-financial-statements?format=pdf.
 
 Known issues / deferred items:
 - Token expiry / 401 auto-logout still deferred.
-- Ledger loads all matching rows with no pagination (acceptable for typical use).
 
 Key constraints:
 - Do NOT modify backend unless there is a clear API mismatch.
@@ -49,14 +50,11 @@ Key constraints:
 - Do NOT scan the entire project unless explicitly required.
 
 Next phase:
-Phase 11 — Reports UI
+Phase 12 — Settings & Phrases UI
 
 Next task:
-- Build Reports page with selectable report types.
-- Wire up trial balance, profit & loss, balance sheet.
-- Add period start/end date pickers.
-- Display report data in structured tables.
-- Add PDF export per report.
+- Build Settings page: company name and other setup fields (GET/PUT /setup).
+- Build Phrases management: list, create, delete phrases (GET/POST/DELETE /phrases).
 
 Resume instruction:
-Continue with Phase 11 only. Use build-system/phases/phase_11.md. Do NOT read full documentation.
+Continue with Phase 12 only. Use build-system/phases/phase_12.md. Do NOT read full documentation.
