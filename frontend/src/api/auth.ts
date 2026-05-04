@@ -8,6 +8,26 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+let _logoutHandler: (() => void) | null = null
+
+export function setLogoutHandler(fn: () => void) {
+  _logoutHandler = fn
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes('/auth/login')
+    ) {
+      localStorage.removeItem('token')
+      _logoutHandler?.()
+    }
+    return Promise.reject(error)
+  }
+)
+
 export interface LoginRequest {
   username: string
   password: string

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getSetup, updateSetup } from '../api/setup'
 import { closePeriod } from '../api/period'
+import { listPhrases, createPhrase, deletePhrase } from '../api/phrases'
 import type { SetupData } from '../api/setup'
+import type { Phrase } from '../api/phrases'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -47,6 +49,22 @@ export function Settings() {
   const [closeResult, setCloseResult] = useState<string | null>(null)
   const [closeErr, setCloseErr] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // phrases
+  const canWrite = (user?.access_level ?? 0) >= 3
+  const [phrases, setPhrases] = useState<Phrase[]>([])
+  const [phraseSearch, setPhraseSearch] = useState('')
+  const [newPhrase, setNewPhrase] = useState('')
+  const [newDr, setNewDr] = useState('')
+  const [newCr, setNewCr] = useState('')
+  const [phraseErr, setPhraseErr] = useState<string | null>(null)
+  const [phraseBusy, setPhraseBusy] = useState(false)
+
+  function loadPhrases(search = phraseSearch) {
+    listPhrases(search || undefined).then(setPhrases).catch(() => {})
+  }
+
+  useEffect(() => { loadPhrases('') }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     getSetup()
@@ -100,6 +118,33 @@ export function Settings() {
     } finally {
       setClosing(false)
     }
+  }
+
+  async function handleAddPhrase() {
+    if (!newPhrase.trim()) return
+    setPhraseBusy(true)
+    setPhraseErr(null)
+    try {
+      await createPhrase(
+        newPhrase.trim(),
+        newDr.trim().toUpperCase() || null,
+        newCr.trim().toUpperCase() || null,
+      )
+      setNewPhrase('')
+      setNewDr('')
+      setNewCr('')
+      loadPhrases()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setPhraseErr(msg ?? 'Failed to add phrase.')
+    } finally {
+      setPhraseBusy(false)
+    }
+  }
+
+  async function handleDeletePhrase(id: number) {
+    await deletePhrase(id)
+    loadPhrases()
   }
 
   const lockedThrough = setup?.locked_before ?? null
@@ -221,6 +266,101 @@ export function Settings() {
           </div>
         ) : (
           <p className="text-xs text-slate-400">Admin access required to close a period.</p>
+        )}
+      </div>
+
+      {/* Phrases */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-700">Journal Phrases</h3>
+          <input
+            type="text"
+            value={phraseSearch}
+            onChange={e => { setPhraseSearch(e.target.value); loadPhrases(e.target.value) }}
+            placeholder="Search…"
+            className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 w-40"
+          />
+        </div>
+
+        {canWrite && (
+          <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-end gap-2">
+            <div className="flex-1 min-w-40">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Phrase</label>
+              <input
+                type="text"
+                value={newPhrase}
+                onChange={e => setNewPhrase(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddPhrase()}
+                placeholder="e.g. Cash sale"
+                maxLength={45}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+            <div className="w-24">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Dr Code</label>
+              <input
+                type="text"
+                value={newDr}
+                onChange={e => setNewDr(e.target.value.toUpperCase())}
+                placeholder="CB01"
+                maxLength={4}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+            <div className="w-24">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Cr Code</label>
+              <input
+                type="text"
+                value={newCr}
+                onChange={e => setNewCr(e.target.value.toUpperCase())}
+                placeholder="SA01"
+                maxLength={4}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+            <button
+              onClick={handleAddPhrase}
+              disabled={!newPhrase.trim() || phraseBusy}
+              className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-50"
+            >
+              {phraseBusy ? 'Adding…' : 'Add'}
+            </button>
+            {phraseErr && <p className="w-full text-xs text-red-600">{phraseErr}</p>}
+          </div>
+        )}
+
+        {phrases.length === 0 ? (
+          <div className="px-5 py-6 text-center text-slate-400 text-sm">No phrases found.</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left px-5 py-2.5 font-medium text-slate-600">Phrase</th>
+                <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-24">Dr</th>
+                <th className="text-left px-4 py-2.5 font-medium text-slate-600 w-24">Cr</th>
+                {canWrite && <th className="w-16" />}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {phrases.map(p => (
+                <tr key={p.id} className="hover:bg-slate-50">
+                  <td className="px-5 py-2.5 text-slate-700">{p.phrase}</td>
+                  <td className="px-4 py-2.5 font-mono text-slate-500">{p.dr_code ?? '—'}</td>
+                  <td className="px-4 py-2.5 font-mono text-slate-500">{p.cr_code ?? '—'}</td>
+                  {canWrite && (
+                    <td className="px-4 py-2.5 text-right">
+                      <button
+                        onClick={() => handleDeletePhrase(p.id)}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 

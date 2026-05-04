@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { login as apiLogin, logout as apiLogout, me } from '../api/auth'
+import { login as apiLogin, logout as apiLogout, me, setLogoutHandler } from '../api/auth'
 import type { UserRead } from '../api/auth'
 
 interface AuthContextValue {
@@ -15,6 +15,10 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserRead | null>(null)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLogoutHandler(() => setUser(null))
+  }, [])
 
   useEffect(() => {
     const token = localStorage.getItem('token')
