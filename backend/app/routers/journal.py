@@ -1,8 +1,9 @@
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
+from itertools import groupby
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth import WriteAccess, get_current_user
@@ -14,6 +15,7 @@ from app.schemas.ledger import (
     JournalIn,
     JournalRead,
     JournalSummary,
+    JournalSummaryLine,
     JournalUpdate,
     LedgerLineRead,
 )
@@ -79,7 +81,19 @@ def list_journals(
     account: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    q = db.query(LedgerEntry)
+    q = (
+        db.query(
+            LedgerEntry.id,
+            LedgerEntry.trx_no,
+            LedgerEntry.date,
+            LedgerEntry.account,
+            LedgerEntry.particular,
+            LedgerEntry.dr_amount,
+            LedgerEntry.cr_amount,
+            Account.name.label("account_name"),
+        )
+        .outerjoin(Account, LedgerEntry.account == Account.code)
+    )
 
     if from_date:
         q = q.filter(LedgerEntry.date >= from_date)
@@ -94,31 +108,33 @@ def list_journals(
         )
         q = q.filter(LedgerEntry.trx_no.in_(acct_trx))
 
-    rows = (
-        q.with_entities(
-            LedgerEntry.trx_no,
-            LedgerEntry.date,
-            func.count().label("line_count"),
-            func.sum(LedgerEntry.dr_amount).label("total_dr"),
-            func.sum(LedgerEntry.cr_amount).label("total_cr"),
-            func.min(LedgerEntry.particular).label("description"),
-        )
-        .group_by(LedgerEntry.trx_no, LedgerEntry.date)
-        .order_by(LedgerEntry.date, LedgerEntry.trx_no)
-        .all()
-    )
+    rows = q.order_by(LedgerEntry.date, LedgerEntry.trx_no, LedgerEntry.id).all()
 
-    return [
-        JournalSummary(
-            trx_no=row.trx_no,
-            date=row.date,
-            line_count=row.line_count,
-            total_dr=_to_dec(row.total_dr),
-            total_cr=_to_dec(row.total_cr),
-            description=row.description or "",
+    result = []
+    for (trx_no, date_val), group_iter in groupby(rows, key=lambda r: (r.trx_no, r.date)):
+        group = list(group_iter)
+        lines = [
+            JournalSummaryLine(
+                account_code=r.account,
+                account_name=r.account_name or "",
+                particular=r.particular,
+                debit=_to_dec(r.dr_amount),
+                credit=_to_dec(r.cr_amount),
+            )
+            for r in group
+        ]
+        result.append(
+            JournalSummary(
+                trx_no=trx_no,
+                date=date_val,
+                line_count=len(group),
+                total_dr=sum(l.debit for l in lines),
+                total_cr=sum(l.credit for l in lines),
+                description=group[0].particular,
+                lines=lines,
+            )
         )
-        for row in rows
-    ]
+    return result
 
 
 @router.get("/{trx_no}", response_model=JournalRead)

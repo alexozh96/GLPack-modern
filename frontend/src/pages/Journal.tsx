@@ -546,7 +546,22 @@ export function Journal() {
                   )}
                   <td className={cls.tdMono}>{entry.trx_no}</td>
                   <td className={cls.td}>{entry.date}</td>
-                  <td className={`${cls.td} max-w-xs truncate`}>{entry.description}</td>
+                  <td className={cls.td}>
+                    <div className="font-medium text-slate-800 truncate max-w-xs">{entry.description}</div>
+                    {entry.lines.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {entry.lines.map((line, i) => (
+                          <div key={i} className="text-[11px] text-slate-400 font-mono leading-tight">
+                            {parseFloat(line.debit) > 0 ? 'Dr' : 'Cr'}{' '}
+                            <span className="text-slate-500">{line.account_code}</span>
+                            {line.account_name && <span> {line.account_name}</span>}
+                            {' — '}
+                            {parseFloat(line.debit) > 0 ? fmtAmt(line.debit) : fmtAmt(line.credit)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                   <td className={cls.tdRight}>{fmtAmt(entry.total_dr)}</td>
                   <td className={cls.tdRight}>{fmtAmt(entry.total_cr)}</td>
                   {canWrite && (

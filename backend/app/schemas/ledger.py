@@ -107,6 +107,14 @@ class JournalRead(BaseModel):
     total_cr: Decimal
 
 
+class JournalSummaryLine(BaseModel):
+    account_code: str
+    account_name: str
+    particular: str
+    debit: Decimal
+    credit: Decimal
+
+
 class JournalSummary(BaseModel):
     trx_no: str
     date: _Date
@@ -114,6 +122,7 @@ class JournalSummary(BaseModel):
     total_dr: Decimal
     total_cr: Decimal
     description: str
+    lines: list[JournalSummaryLine]
 
 
 class LedgerLineWithBalance(BaseModel):

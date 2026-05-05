@@ -16,6 +16,14 @@ export interface JournalRead {
   total_cr: string
 }
 
+export interface JournalSummaryLine {
+  account_code: string
+  account_name: string
+  particular: string
+  debit: string
+  credit: string
+}
+
 export interface JournalSummary {
   trx_no: string
   date: string
@@ -23,6 +31,7 @@ export interface JournalSummary {
   total_dr: string
   total_cr: string
   description: string
+  lines: JournalSummaryLine[]
 }
 
 export interface LineInput {
