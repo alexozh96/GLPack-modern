@@ -25,7 +25,9 @@ export function Ledger() {
   const navigate = useNavigate()
 
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [account, setAccount] = useState('')
+  const [account, setAccount] = useState('')         // code sent to API
+  const [accountQuery, setAccountQuery] = useState('') // text shown in search input
+  const [accountOpen, setAccountOpen] = useState(false)
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
 
@@ -74,6 +76,20 @@ export function Ledger() {
     navigate('/journal', { state: { openTrx: trxNo } })
   }
 
+  const filteredAccounts = accounts
+    .filter(a => {
+      const q = accountQuery.toLowerCase()
+      return a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)
+    })
+    .slice(0, 14)
+
+  function selectAccount(a: Account) {
+    setAccount(a.code)
+    setAccountQuery(`${a.code} — ${a.name}`)
+    setAccountOpen(false)
+    setLoaded(false)
+  }
+
   const selectedAccount = accounts.find(a => a.code === account)
   const canPdf = !!account && !!fromDate && !!toDate
 
@@ -92,16 +108,36 @@ export function Ledger() {
 
       {/* Filters */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex gap-3 items-center flex-wrap">
-        <select
-          value={account}
-          onChange={e => { setAccount(e.target.value); setLoaded(false) }}
-          className={cls.select}
-        >
-          <option value="">Select account…</option>
-          {accounts.map(a => (
-            <option key={a.code} value={a.code}>{a.code} — {a.name}</option>
-          ))}
-        </select>
+        <div className="relative">
+          <input
+            type="text"
+            value={accountQuery}
+            onChange={e => {
+              setAccountQuery(e.target.value)
+              setAccount('')
+              setLoaded(false)
+              setAccountOpen(true)
+            }}
+            onFocus={() => setAccountOpen(true)}
+            onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
+            placeholder="Search account…"
+            className={`${cls.input} w-56`}
+          />
+          {accountOpen && filteredAccounts.length > 0 && (
+            <div className="absolute z-20 top-full left-0 mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto min-w-full">
+              {filteredAccounts.map(a => (
+                <div
+                  key={a.code}
+                  onMouseDown={() => selectAccount(a)}
+                  className="px-3 py-2 hover:bg-[#0875e1]/[0.06] hover:text-[#0875e1] cursor-pointer text-xs whitespace-nowrap transition-colors"
+                >
+                  <span className="font-mono">{a.code}</span>
+                  {' — '}{a.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <input
           type="date"
