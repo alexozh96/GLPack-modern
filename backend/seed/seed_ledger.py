@@ -13,7 +13,6 @@ from app.database import SessionLocal
 from app.models.ledger import LedgerEntry
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-DBF_PATH = Path(os.environ["GLPACK_DATA_DIR"]) / "GLEDGER.DBF"
 
 
 def _to_decimal(value) -> Decimal:
@@ -38,11 +37,15 @@ def _to_date(value) -> date:
 
 
 def seed_ledger(session=None) -> int:
+    data_dir = os.environ.get("GLPACK_DATA_DIR")
+    if not data_dir:
+        raise EnvironmentError("GLPACK_DATA_DIR is not set in backend/.env")
+    dbf_path = Path(data_dir) / "GLEDGER.DBF"
     own_session = session is None
     if own_session:
         session = SessionLocal()
     try:
-        table = DBF(str(DBF_PATH), encoding="cp437", load=True)
+        table = DBF(str(dbf_path), encoding="cp437", load=True)
         count = 0
         for record in table:
             trx_no = (record.get("TRXNO") or "").strip()

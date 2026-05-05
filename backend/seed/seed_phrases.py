@@ -11,15 +11,18 @@ from app.database import SessionLocal
 from app.models.phrase import Phrase
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-DBF_PATH = Path(os.environ["GLPACK_DATA_DIR"]) / "GLPHRASE.DBF"
 
 
 def seed_phrases(session=None) -> int:
+    data_dir = os.environ.get("GLPACK_DATA_DIR")
+    if not data_dir:
+        raise EnvironmentError("GLPACK_DATA_DIR is not set in backend/.env")
+    dbf_path = Path(data_dir) / "GLPHRASE.DBF"
     own_session = session is None
     if own_session:
         session = SessionLocal()
     try:
-        table = DBF(str(DBF_PATH), encoding="cp437", load=True)
+        table = DBF(str(dbf_path), encoding="cp437", load=True)
 
         seen: set[tuple] = {
             (p.phrase, p.dr_code, p.cr_code)
