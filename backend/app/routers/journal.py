@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -201,6 +202,38 @@ def update_journal(trx_no: str, body: JournalUpdate, _: WriteAccess, db: Session
     for e in entries:
         db.refresh(e)
     return _build_journal_read(trx_no, entries)
+
+
+class BulkJournalDeleteIn(BaseModel):
+    trx_nos: list[str]
+
+
+class BulkJournalDeleteResult(BaseModel):
+    deleted: int
+    locked: list[str]
+    not_found: list[str]
+
+
+@router.delete("/bulk", response_model=BulkJournalDeleteResult)
+def bulk_delete_journals(body: BulkJournalDeleteIn, _: WriteAccess, db: Session = Depends(get_db)):
+    deleted = 0
+    locked: list[str] = []
+    not_found: list[str] = []
+    for trx_no in body.trx_nos:
+        entries = db.query(LedgerEntry).filter(LedgerEntry.trx_no == trx_no.upper()).all()
+        if not entries:
+            not_found.append(trx_no)
+            continue
+        try:
+            _check_locked(db, entries[0].date)
+        except HTTPException:
+            locked.append(trx_no)
+            continue
+        for e in entries:
+            db.delete(e)
+        deleted += 1
+    db.commit()
+    return BulkJournalDeleteResult(deleted=deleted, locked=locked, not_found=not_found)
 
 
 @router.delete("/{trx_no}", status_code=204)

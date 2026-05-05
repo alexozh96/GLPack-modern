@@ -55,3 +55,14 @@ export async function updateJournal(trxNo: string, date: string, lines: LineInpu
 export async function deleteJournal(trxNo: string): Promise<void> {
   await api.delete(`/journal/${trxNo}`)
 }
+
+export interface BulkJournalDeleteResult {
+  deleted: number
+  locked: string[]
+  not_found: string[]
+}
+
+export async function bulkDeleteJournals(trxNos: string[]): Promise<BulkJournalDeleteResult> {
+  const res = await api.delete<BulkJournalDeleteResult>('/journal/bulk', { data: { trx_nos: trxNos } })
+  return res.data
+}

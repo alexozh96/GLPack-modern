@@ -44,6 +44,16 @@ export async function exportAccountsCsv(search?: string, prefix?: string): Promi
   downloadBlob(res.data as Blob, 'accounts.csv')
 }
 
+export interface BulkDeleteResult {
+  deleted: number
+  skipped: string[]
+}
+
+export async function bulkDeleteAccounts(codes: string[]): Promise<BulkDeleteResult> {
+  const res = await api.delete<BulkDeleteResult>('/accounts/bulk', { data: { codes } })
+  return res.data
+}
+
 export interface AccountImportResult {
   imported: number
   skipped: number

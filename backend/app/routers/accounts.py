@@ -8,12 +8,22 @@ from sqlalchemy.orm import Session
 from app.auth import AdminAccess, get_current_user
 from app.database import get_db
 from app.models.account import Account
+from app.models.ledger import LedgerEntry
 from app.schemas.account import AccountCreate, AccountRead, AccountUpdate
 
 
 class AccountImportResult(BaseModel):
     imported: int
     skipped: int
+
+
+class BulkDeleteIn(BaseModel):
+    codes: list[str]
+
+
+class BulkDeleteResult(BaseModel):
+    deleted: int
+    skipped: list[str]
 
 router = APIRouter(prefix="/accounts", tags=["accounts"], dependencies=[Depends(get_current_user)])
 
@@ -88,6 +98,25 @@ def update_account(code: str, body: AccountUpdate, _: AdminAccess, db: Session =
     db.commit()
     db.refresh(account)
     return account
+
+
+@router.delete("/bulk", response_model=BulkDeleteResult)
+def bulk_delete_accounts(body: BulkDeleteIn, _: AdminAccess, db: Session = Depends(get_db)):
+    deleted = 0
+    skipped: list[str] = []
+    for code in body.codes:
+        account = db.get(Account, code.upper())
+        if not account:
+            skipped.append(code)
+            continue
+        has_entries = db.query(LedgerEntry).filter(LedgerEntry.account == code.upper()).first()
+        if has_entries:
+            skipped.append(code)
+            continue
+        db.delete(account)
+        deleted += 1
+    db.commit()
+    return BulkDeleteResult(deleted=deleted, skipped=skipped)
 
 
 @router.delete("/{code}", status_code=204)

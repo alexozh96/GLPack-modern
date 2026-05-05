@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { listJournals, getJournal, createJournal, updateJournal, deleteJournal } from '../api/journal'
+import { listJournals, getJournal, createJournal, updateJournal, deleteJournal, bulkDeleteJournals } from '../api/journal'
 import { listAccounts } from '../api/accounts'
 import { listPhrases } from '../api/phrases'
 import { importLedgerCsv, exportLedgerCsv } from '../api/ledger'
@@ -10,6 +10,22 @@ import type { JournalSummary } from '../api/journal'
 import type { Account } from '../api/accounts'
 import type { Phrase } from '../api/phrases'
 import { PageHeader, cls } from '../components/ui'
+
+interface ImportPreview {
+  file: File
+  headers: string[]
+  rows: string[][]
+  total: number
+}
+
+function parseCsvPreview(text: string): { headers: string[]; rows: string[][]; total: number } {
+  const lines = text.trim().split(/\r?\n/).filter(Boolean)
+  if (lines.length < 1) return { headers: [], rows: [], total: 0 }
+  const parse = (s: string) => s.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
+  const headers = parse(lines[0])
+  const data = lines.slice(1).map(parse)
+  return { headers, rows: data.slice(0, 5), total: data.length }
+}
 
 function todayStr() { return new Date().toISOString().slice(0, 10) }
 function round2(n: number) { return Math.round(n * 100) / 100 }
@@ -101,6 +117,13 @@ export function Journal() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [phrases, setPhrases] = useState<Phrase[]>([])
 
+  // multi-select
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
+  const [bulkDeleteBusy, setBulkDeleteBusy] = useState(false)
+
+  // import
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null)
   const [importBusy, setImportBusy] = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
   const importFileRef = useRef<HTMLInputElement>(null)
@@ -136,6 +159,7 @@ export function Journal() {
 
   function loadList(fd = fromDate, td = toDate) {
     setListLoading(true); setListError(null)
+    setSelected(new Set())
     const params: Record<string, string> = {}
     if (fd) params.from_date = fd
     if (td) params.to_date = td
@@ -147,6 +171,22 @@ export function Journal() {
 
   function applyFilter() { loadList(fromDate, toDate) }
   function clearFilter() { setFromDate(''); setToDate(''); loadList('', '') }
+
+  const allSelected = entries.length > 0 && entries.every(e => selected.has(e.trx_no))
+
+  function toggleSelectAll() {
+    if (allSelected) setSelected(new Set())
+    else setSelected(new Set(entries.map(e => e.trx_no)))
+  }
+
+  function toggleSelect(trxNo: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(trxNo)) next.delete(trxNo)
+      else next.add(trxNo)
+      return next
+    })
+  }
 
   async function handleDelete(trxNo: string) {
     setDeleteBusy(true)
@@ -161,6 +201,24 @@ export function Journal() {
         toast.error('This entry is in a locked period and cannot be deleted.')
     } finally {
       setDeleteBusy(false)
+    }
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleteBusy(true)
+    try {
+      const result = await bulkDeleteJournals([...selected])
+      setBulkDeleteConfirm(false)
+      setSelected(new Set())
+      const parts: string[] = [`Deleted ${result.deleted} transaction${result.deleted !== 1 ? 's' : ''}.`]
+      if (result.locked.length > 0) parts.push(`${result.locked.length} skipped (locked period).`)
+      setImportResult(parts.join(' '))
+      loadList()
+    } catch (err) {
+      setListError(apiError(err))
+      setBulkDeleteConfirm(false)
+    } finally {
+      setBulkDeleteBusy(false)
     }
   }
 
@@ -182,15 +240,24 @@ export function Journal() {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
+    const text = await file.text()
+    const { headers, rows, total } = parseCsvPreview(text)
+    setImportPreview({ file, headers, rows, total })
+  }
+
+  async function handleImportConfirm() {
+    if (!importPreview) return
     setImportBusy(true)
     setImportResult(null)
     setListError(null)
     try {
-      const result = await importLedgerCsv(file)
+      const result = await importLedgerCsv(importPreview.file)
       setImportResult(`Imported ${result.imported_rows} rows across ${result.imported_transactions} transaction${result.imported_transactions !== 1 ? 's' : ''}`)
+      setImportPreview(null)
       loadList()
     } catch (err) {
       setListError(apiError(err))
+      setImportPreview(null)
     } finally {
       setImportBusy(false)
     }
@@ -387,28 +454,26 @@ export function Journal() {
         sub={`${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`}
       >
         <>
-          <button
-            onClick={handleExport}
-            disabled={exportBusy}
-            className={cls.btnSecondary}
-          >
+          {canWrite && selected.size > 0 && (
+            <button
+              onClick={() => setBulkDeleteConfirm(true)}
+              className="h-9 px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Delete {selected.size} selected
+            </button>
+          )}
+          <button onClick={handleExport} disabled={exportBusy} className={cls.btnSecondary}>
             {exportBusy ? 'Exporting…' : 'Export CSV'}
           </button>
           {canWrite && (
             <>
-              <input
-                ref={importFileRef}
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleImport}
-              />
+              <input ref={importFileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
               <button
                 onClick={() => importFileRef.current?.click()}
                 disabled={importBusy}
                 className={cls.btnSecondary}
               >
-                {importBusy ? 'Importing…' : 'Import CSV'}
+                Import CSV
               </button>
               <button onClick={openNew} className={cls.btnPrimary}>+ New Entry</button>
             </>
@@ -418,15 +483,9 @@ export function Journal() {
 
       {/* Date filter */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex gap-3 items-center flex-wrap">
-        <input
-          type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-          className={cls.input}
-        />
+        <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className={cls.input} />
         <span className="text-slate-400 text-sm">to</span>
-        <input
-          type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-          className={cls.input}
-        />
+        <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className={cls.input} />
         <button onClick={applyFilter} className={cls.btnSecondary}>Filter</button>
         {(fromDate || toDate) && (
           <button onClick={clearFilter} className="text-sm text-slate-400 hover:text-[#0875e1] transition-colors">
@@ -451,17 +510,40 @@ export function Journal() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
+                {canWrite && (
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      className="accent-[#0875e1] cursor-pointer"
+                    />
+                  </th>
+                )}
                 <th className={`${cls.th} w-24`}>TRX</th>
                 <th className={`${cls.th} w-28`}>Date</th>
                 <th className={cls.th}>Description</th>
                 <th className={`${cls.thRight} w-28`}>Debit</th>
                 <th className={`${cls.thRight} w-28`}>Credit</th>
-                {canWrite && <th className="w-32" />}
+                {canWrite && <th className="w-36" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {entries.map(entry => (
-                <tr key={entry.trx_no} className="hover:bg-[#0875e1]/[0.03] transition-colors">
+                <tr
+                  key={entry.trx_no}
+                  className={`transition-colors ${selected.has(entry.trx_no) ? 'bg-[#0875e1]/[0.04]' : 'hover:bg-[#0875e1]/[0.03]'}`}
+                >
+                  {canWrite && (
+                    <td className="w-10 px-4 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(entry.trx_no)}
+                        onChange={() => toggleSelect(entry.trx_no)}
+                        className="accent-[#0875e1] cursor-pointer"
+                      />
+                    </td>
+                  )}
                   <td className={cls.tdMono}>{entry.trx_no}</td>
                   <td className={cls.td}>{entry.date}</td>
                   <td className={`${cls.td} max-w-xs truncate`}>{entry.description}</td>
@@ -493,6 +575,91 @@ export function Journal() {
           </table>
         )}
       </div>
+
+      {entries.length > 0 && selected.size > 0 && (
+        <p className="text-xs text-slate-400">{selected.size} of {entries.length} selected</p>
+      )}
+
+      {/* Bulk delete confirmation */}
+      {bulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm space-y-4">
+            <h3 className="text-lg font-bold text-slate-800">
+              Delete {selected.size} transaction{selected.size !== 1 ? 's' : ''}?
+            </h3>
+            <p className="text-sm text-slate-600">
+              Entries in a locked period will be skipped. All others will be permanently removed.
+            </p>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteBusy}
+                className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+              >
+                {bulkDeleteBusy ? 'Deleting…' : `Delete ${selected.size}`}
+              </button>
+              <button onClick={() => setBulkDeleteConfirm(false)} className={`flex-1 ${cls.btnSecondary}`}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import preview confirmation */}
+      {importPreview && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-3xl space-y-5">
+            <h3 className="text-lg font-bold text-slate-800">Confirm Import</h3>
+            <div className="text-sm text-slate-600 space-y-1">
+              <p>File: <span className="font-mono text-slate-800">{importPreview.file.name}</span></p>
+              <p>Rows found: <span className="font-semibold text-slate-800">{importPreview.total}</span></p>
+              <p className="text-xs text-slate-400">
+                All transactions must balance. Accounts must exist. Duplicate TRX numbers will be rejected.
+              </p>
+            </div>
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <div className="overflow-x-auto max-h-52 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50 sticky top-0">
+                    <tr>
+                      {importPreview.headers.map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-semibold text-slate-600 whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {importPreview.rows.map((row, i) => (
+                      <tr key={i}>
+                        {row.map((cell, j) => (
+                          <td key={j} className="px-3 py-1.5 font-mono text-slate-700 whitespace-nowrap">{cell}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {importPreview.total > 5 && (
+                <p className="px-3 py-2 text-xs text-slate-400 border-t border-slate-100">
+                  Showing first 5 of {importPreview.total} rows
+                </p>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleImportConfirm}
+                disabled={importBusy}
+                className={`flex-1 ${cls.btnPrimary}`}
+              >
+                {importBusy ? 'Importing…' : `Import ${importPreview.total} row${importPreview.total !== 1 ? 's' : ''}`}
+              </button>
+              <button onClick={() => setImportPreview(null)} className={`flex-1 ${cls.btnSecondary}`}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
