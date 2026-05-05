@@ -107,7 +107,7 @@ export function Dashboard() {
   const { start: yearStart } = thisYear()
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       <PageHeader title="Dashboard" sub={`Year to date — ${yearStart} to today`} />
 
       {partial && (
@@ -118,13 +118,13 @@ export function Dashboard() {
 
       {/* KPI cards */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white border border-slate-200 rounded-xl p-6 min-h-[110px] animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <KpiCard label="Total Revenue"    value={kpis?.revenue ?? '—'}            sub="Year to date" />
           <KpiCard label="Gross Profit %"   value={kpis?.grossPct ?? '—'}           sub="Of revenue"   />
           <KpiCard label="Net Profit"       value={kpis?.netProfit ?? '—'}          sub="After tax"    />
@@ -132,7 +132,7 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         {/* Monthly activity chart */}
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
           <h3 className={`${cls.cardTitle} mb-5`}>Monthly Transaction Volume</h3>

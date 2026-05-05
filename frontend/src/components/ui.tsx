@@ -63,7 +63,7 @@ export function PageHeader({
   title, sub, children,
 }: { title: string; sub?: string; children?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between mb-6">
+    <div className="flex items-start justify-between">
       <div>
         <h1 className={cls.pageTitle}>{title}</h1>
         {sub && <p className={cls.pageSub}>{sub}</p>}
