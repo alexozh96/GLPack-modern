@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import type { ReactNode } from 'react'
 
 // ─── Shared class constants ───────────────────────────────────────────────────
@@ -91,52 +90,4 @@ export function CardHeader({ title, children }: { title: string; children?: Reac
 
 export function EmptyState({ message }: { message: string }) {
   return <div className="py-14 text-center text-slate-400 text-sm">{message}</div>
-}
-
-// ─── Sortable table header ────────────────────────────────────────────────────
-
-export type SortDir = 'asc' | 'desc' | null
-
-export function SortHeader({
-  label, col, sortKey, sortDir, onSort, className = '', right = false,
-}: {
-  label: string
-  col: string
-  sortKey: string | null
-  sortDir: SortDir
-  onSort: (col: string) => void
-  className?: string
-  right?: boolean
-}) {
-  const active = sortKey === col
-  return (
-    <th
-      onClick={() => onSort(col)}
-      className={`${right ? cls.thRight : cls.th} cursor-pointer select-none hover:text-slate-700 ${className}`}
-    >
-      <span className={`inline-flex items-center gap-1 ${right ? 'justify-end w-full' : ''}`}>
-        <span className={active ? 'text-[#0875e1]' : ''}>{label}</span>
-        <span className={`text-[9px] leading-none ${active ? 'text-[#0875e1]' : 'text-slate-300'}`}>
-          {active ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
-        </span>
-      </span>
-    </th>
-  )
-}
-
-export function useSortState(defaultKey: string | null = null, defaultDir: SortDir = null) {
-  const [sortKey, setSortKey] = useState<string | null>(defaultKey)
-  const [sortDir, setSortDir] = useState<SortDir>(defaultDir)
-
-  function handleSort(col: string) {
-    if (sortKey === col) {
-      if (sortDir === 'asc') setSortDir('desc')
-      else { setSortKey(null); setSortDir(null) }
-    } else {
-      setSortKey(col)
-      setSortDir('asc')
-    }
-  }
-
-  return { sortKey, sortDir, handleSort }
 }

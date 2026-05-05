@@ -5,7 +5,8 @@ import { downloadLedgerPdf } from '../api/reports'
 import { listAccounts } from '../api/accounts'
 import type { LedgerLine } from '../api/ledger'
 import type { Account } from '../api/accounts'
-import { PageHeader, cls, SortHeader, useSortState } from '../components/ui'
+import { PageHeader, cls } from '../components/ui'
+import { ColumnHeader, useTableControls, applyTableControls } from '../components/TableControls'
 
 function fmtAmt(v: string | number): string {
   const n = parseFloat(String(v))
@@ -36,7 +37,7 @@ export function Ledger() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pdfBusy, setPdfBusy] = useState(false)
-  const { sortKey, sortDir, handleSort } = useSortState()
+  const tc = useTableControls()
 
   useEffect(() => {
     listAccounts().then(setAccounts).catch(() => {})
@@ -91,19 +92,18 @@ export function Ledger() {
     setLoaded(false)
   }
 
-  const sortedRows = useMemo(() => {
-    if (!sortKey) return rows
-    return [...rows].sort((a, b) => {
-      let cmp = 0
-      if (sortKey === 'date')       cmp = a.date.localeCompare(b.date)
-      else if (sortKey === 'trx_no')     cmp = a.trx_no.localeCompare(b.trx_no)
-      else if (sortKey === 'particular') cmp = a.particular.localeCompare(b.particular)
-      else if (sortKey === 'dr_amount')  cmp = parseFloat(a.dr_amount) - parseFloat(b.dr_amount)
-      else if (sortKey === 'cr_amount')  cmp = parseFloat(a.cr_amount) - parseFloat(b.cr_amount)
-      else if (sortKey === 'balance')    cmp = parseFloat(a.balance)   - parseFloat(b.balance)
-      return sortDir === 'asc' ? cmp : -cmp
-    })
-  }, [rows, sortKey, sortDir])
+  const displayed = useMemo(() => applyTableControls(
+    rows, tc.sortKey, tc.sortDir, tc.filters,
+    (row, col) => {
+      if (col === 'date')       return row.date
+      if (col === 'trx_no')     return row.trx_no
+      if (col === 'particular') return row.particular
+      if (col === 'dr_amount')  return parseFloat(row.dr_amount) || 0
+      if (col === 'cr_amount')  return parseFloat(row.cr_amount) || 0
+      if (col === 'balance')    return parseFloat(row.balance)   || 0
+      return ''
+    },
+  ), [rows, tc.sortKey, tc.sortDir, tc.filters])
 
   const selectedAccount = accounts.find(a => a.code === account)
   const canPdf = !!account && !!fromDate && !!toDate
@@ -214,16 +214,16 @@ export function Ledger() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <SortHeader label="Date"       col="date"       sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" />
-                    <SortHeader label="TRX"        col="trx_no"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-20" />
-                    <SortHeader label="Particular" col="particular" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                    <SortHeader label="Debit"      col="dr_amount"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" right />
-                    <SortHeader label="Credit"     col="cr_amount"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" right />
-                    <SortHeader label="Balance"    col="balance"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-32" right />
+                    <ColumnHeader label="Date"       col="date"       type="date"   sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-28" />
+                    <ColumnHeader label="TRX"        col="trx_no"     type="text"   sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-20" />
+                    <ColumnHeader label="Particular" col="particular" type="text"   sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} />
+                    <ColumnHeader label="Debit"      col="dr_amount"  type="number" sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-28" right />
+                    <ColumnHeader label="Credit"     col="cr_amount"  type="number" sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-28" right />
+                    <ColumnHeader label="Balance"    col="balance"    type="number" sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-32" right />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {sortedRows.map(row => {
+                  {displayed.map(row => {
                     const bal = fmtBalance(row.balance)
                     return (
                       <tr key={row.id} className="hover:bg-[#0875e1]/[0.03] transition-colors">
@@ -256,7 +256,9 @@ export function Ledger() {
                 <tfoot className="border-t-2 border-slate-300 bg-slate-50">
                   <tr>
                     <td colSpan={3} className="px-5 py-3 text-sm font-medium text-slate-600">
-                      Totals ({rows.length} line{rows.length !== 1 ? 's' : ''})
+                      Totals ({displayed.length === rows.length
+                        ? `${rows.length} line${rows.length !== 1 ? 's' : ''}`
+                        : `${displayed.length} of ${rows.length} lines`})
                     </td>
                     <td className="px-5 py-3 text-right font-mono font-semibold text-slate-800">
                       {totalDr.toFixed(2)}

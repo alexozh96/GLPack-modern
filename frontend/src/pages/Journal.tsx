@@ -9,7 +9,8 @@ import { importLedgerCsv, exportLedgerCsv } from '../api/ledger'
 import type { JournalSummary } from '../api/journal'
 import type { Account } from '../api/accounts'
 import type { Phrase } from '../api/phrases'
-import { PageHeader, cls, SortHeader, useSortState } from '../components/ui'
+import { PageHeader, cls } from '../components/ui'
+import { ColumnHeader, useTableControls, applyTableControls } from '../components/TableControls'
 
 interface ImportPreview {
   file: File
@@ -111,7 +112,7 @@ export function Journal() {
   const [listError, setListError] = useState<string | null>(null)
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
-  const { sortKey, sortDir, handleSort } = useSortState()
+  const tc = useTableControls()
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
 
@@ -141,18 +142,17 @@ export function Journal() {
   const balanced = totalDr > 0 && totalDr === totalCr
   const diff = round2(Math.abs(totalDr - totalCr))
 
-  const sortedEntries = useMemo(() => {
-    if (!sortKey) return entries
-    return [...entries].sort((a, b) => {
-      let cmp = 0
-      if (sortKey === 'trx_no')      cmp = a.trx_no.localeCompare(b.trx_no)
-      else if (sortKey === 'date')        cmp = a.date.localeCompare(b.date)
-      else if (sortKey === 'description') cmp = a.description.localeCompare(b.description)
-      else if (sortKey === 'total_dr')    cmp = parseFloat(a.total_dr) - parseFloat(b.total_dr)
-      else if (sortKey === 'total_cr')    cmp = parseFloat(a.total_cr) - parseFloat(b.total_cr)
-      return sortDir === 'asc' ? cmp : -cmp
-    })
-  }, [entries, sortKey, sortDir])
+  const displayed = useMemo(() => applyTableControls(
+    entries, tc.sortKey, tc.sortDir, tc.filters,
+    (row, col) => {
+      if (col === 'trx_no')      return row.trx_no
+      if (col === 'date')        return row.date
+      if (col === 'description') return row.description
+      if (col === 'total_dr')    return parseFloat(row.total_dr) || 0
+      if (col === 'total_cr')    return parseFloat(row.total_cr) || 0
+      return ''
+    },
+  ), [entries, tc.sortKey, tc.sortDir, tc.filters])
 
   const accountOptions: ComboOption[] = accounts.map(a => ({ value: a.code, label: `${a.code} — ${a.name}` }))
   const phraseOptions: ComboOption[] = phrases.map(p => ({
@@ -186,11 +186,11 @@ export function Journal() {
   function applyFilter() { loadList(fromDate, toDate) }
   function clearFilter() { setFromDate(''); setToDate(''); loadList('', '') }
 
-  const allSelected = entries.length > 0 && entries.every(e => selected.has(e.trx_no))
+  const allSelected = displayed.length > 0 && displayed.every(e => selected.has(e.trx_no))
 
   function toggleSelectAll() {
     if (allSelected) setSelected(new Set())
-    else setSelected(new Set(entries.map(e => e.trx_no)))
+    else setSelected(new Set(displayed.map(e => e.trx_no)))
   }
 
   function toggleSelect(trxNo: string) {
@@ -465,7 +465,9 @@ export function Journal() {
     <div className="space-y-5">
       <PageHeader
         title="Journal Entries"
-        sub={`${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`}
+        sub={displayed.length === entries.length
+          ? `${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`
+          : `${displayed.length} of ${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`}
       >
         <>
           {canWrite && selected.size > 0 && (
@@ -534,16 +536,16 @@ export function Journal() {
                     />
                   </th>
                 )}
-                <SortHeader label="TRX"         col="trx_no"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-24" />
-                <SortHeader label="Date"        col="date"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" />
-                <SortHeader label="Description" col="description" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                <SortHeader label="Debit"       col="total_dr"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" right />
-                <SortHeader label="Credit"      col="total_cr"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" right />
+                <ColumnHeader label="TRX"         col="trx_no"      type="text"   sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-24" />
+                <ColumnHeader label="Date"        col="date"        type="date"   sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-28" />
+                <ColumnHeader label="Description" col="description" type="text"   sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} />
+                <ColumnHeader label="Debit"       col="total_dr"    type="number" sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-28" right />
+                <ColumnHeader label="Credit"      col="total_cr"    type="number" sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-28" right />
                 {canWrite && <th className="w-36" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {sortedEntries.map(entry => (
+              {displayed.map(entry => (
                 <tr
                   key={entry.trx_no}
                   className={`transition-colors ${selected.has(entry.trx_no) ? 'bg-[#0875e1]/[0.04]' : 'hover:bg-[#0875e1]/[0.03]'}`}

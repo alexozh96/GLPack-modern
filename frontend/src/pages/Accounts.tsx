@@ -6,7 +6,8 @@ import {
   importAccountsCsv, exportAccountsCsv, bulkDeleteAccounts,
 } from '../api/accounts'
 import type { Account } from '../api/accounts'
-import { PageHeader, cls, SortHeader, useSortState } from '../components/ui'
+import { PageHeader, cls } from '../components/ui'
+import { ColumnHeader, useTableControls, applyTableControls } from '../components/TableControls'
 
 const PREFIX_OPTIONS = [
   { value: '', label: 'All categories' },
@@ -53,7 +54,7 @@ export function Accounts() {
 
   const [search, setSearch] = useState('')
   const [prefix, setPrefix] = useState('')
-  const { sortKey, sortDir, handleSort } = useSortState()
+  const tc = useTableControls()
 
   const [modal, setModal] = useState<ModalState | null>(null)
   const [formCode, setFormCode] = useState('')
@@ -92,21 +93,16 @@ export function Accounts() {
   const filtered = useMemo(() => {
     const s = search.toLowerCase()
     const p = prefix.toUpperCase()
-    let result = accounts.filter(a => {
+    const base = accounts.filter(a => {
       const matchSearch = !s || a.code.toLowerCase().includes(s) || a.name.toLowerCase().includes(s)
       const matchPrefix = !p || a.code.startsWith(p)
       return matchSearch && matchPrefix
     })
-    if (sortKey) {
-      result = [...result].sort((a, b) => {
-        const av = sortKey === 'code' ? a.code : a.name
-        const bv = sortKey === 'code' ? b.code : b.name
-        const cmp = av.localeCompare(bv)
-        return sortDir === 'asc' ? cmp : -cmp
-      })
-    }
-    return result
-  }, [accounts, search, prefix, sortKey, sortDir])
+    return applyTableControls(
+      base, tc.sortKey, tc.sortDir, tc.filters,
+      (row, col) => col === 'code' ? row.code : row.name,
+    )
+  }, [accounts, search, prefix, tc.sortKey, tc.sortDir, tc.filters])
 
   const allSelected = filtered.length > 0 && filtered.every(a => selected.has(a.code))
 
@@ -320,8 +316,8 @@ export function Accounts() {
                     />
                   </th>
                 )}
-                <SortHeader label="Code" col="code" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-24" />
-                <SortHeader label="Name" col="name" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <ColumnHeader label="Code" col="code" type="text" sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} className="w-24" />
+                <ColumnHeader label="Name" col="name" type="text" sortKey={tc.sortKey} sortDir={tc.sortDir} filters={tc.filters} onSort={tc.setSort} onClearSort={tc.clearSort} onSetFilter={tc.setFilter} onClearFilter={tc.clearFilter} />
                 {isAdmin && <th className="w-36" />}
               </tr>
             </thead>
