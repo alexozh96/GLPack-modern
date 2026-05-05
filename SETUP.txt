@@ -1,0 +1,63 @@
+GLPack Modern — Setup Instructions
+====================================
+
+PREREQUISITES
+-------------
+- Python 3.x     https://python.org      (check "Add to PATH" during install)
+- Node.js        https://nodejs.org
+
+
+FIRST-TIME SETUP
+----------------
+1. Clone or copy the project folder to your machine.
+
+2. Double-click setup.bat in the project root.
+   This will automatically:
+   - Create the Python virtual environment (backend\.venv)
+   - Install all Python packages from requirements.txt
+   - Create backend\.env from backend\.env.example
+   - Install frontend Node packages (node_modules)
+
+3. Once setup.bat completes, double-click start.bat to launch the app.
+   Your browser will open automatically at http://localhost:5173
+
+
+IMPORTING LEGACY DATA (optional, one-time only)
+------------------------------------------------
+Only needed if you have old GLPACK DBF files to migrate.
+
+1. Open backend\.env and set GLPACK_DATA_DIR to the folder containing:
+      ACCLIST.DBF, GLEDGER.DBF, GLPHRASE.DBF
+
+   Example:
+      GLPACK_DATA_DIR=C:\Users\YourName\Documents\GLPACK
+
+2. Open a terminal in the backend\ folder and run:
+      .venv\Scripts\activate
+      python seed/run_all.py
+
+3. Once seeding is done, the .env path no longer matters.
+   The app reads from glpack.db from that point on.
+
+
+FILES NOT INCLUDED IN THE REPO (recreated by setup.bat)
+---------------------------------------------------------
+- backend\.venv\       Python virtual environment
+- backend\.env         Local environment config
+- backend\glpack.db    SQLite database (created automatically on first run)
+- frontend\node_modules\  Node packages
+
+
+RUNNING THE APP
+---------------
+Double-click start.bat from the project root.
+
+This opens two terminal windows (backend + frontend) and launches
+the browser. Close both terminal windows to stop the app.
+
+
+UPDATING (after a git pull)
+----------------------------
+If packages were added since your last pull, re-run setup.bat.
+It skips steps already done (venv creation, .env) and only
+reinstalls packages and node modules.
