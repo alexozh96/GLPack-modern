@@ -253,6 +253,12 @@ export function Journal() {
                         placeholder="Code"
                         inputClass="font-mono"
                       />
+                      {(() => {
+                        const name = accounts.find(a => a.code === row.account)?.name
+                        return name ? (
+                          <p className="text-[11px] text-slate-400 leading-tight mt-0.5 px-0.5 truncate">{name}</p>
+                        ) : null
+                      })()}
                     </td>
                     <td className="pr-3 py-2">
                       <Combobox
