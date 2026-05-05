@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext'
 import { listJournals, getJournal, createJournal, updateJournal, deleteJournal } from '../api/journal'
 import { listAccounts } from '../api/accounts'
 import { listPhrases } from '../api/phrases'
-import { importLedgerCsv } from '../api/ledger'
+import { importLedgerCsv, exportLedgerCsv } from '../api/ledger'
 import type { JournalSummary } from '../api/journal'
 import type { Account } from '../api/accounts'
 import type { Phrase } from '../api/phrases'
@@ -105,6 +105,8 @@ export function Journal() {
   const [importResult, setImportResult] = useState<string | null>(null)
   const importFileRef = useRef<HTMLInputElement>(null)
 
+  const [exportBusy, setExportBusy] = useState(false)
+
   const [formDate, setFormDate] = useState(todayStr())
   const [rows, setRows] = useState<FormRow[]>([emptyRow(), emptyRow()])
   const [formBusy, setFormBusy] = useState(false)
@@ -159,6 +161,20 @@ export function Journal() {
         toast.error('This entry is in a locked period and cannot be deleted.')
     } finally {
       setDeleteBusy(false)
+    }
+  }
+
+  async function handleExport() {
+    setExportBusy(true)
+    try {
+      await exportLedgerCsv({
+        from_date: fromDate || undefined,
+        to_date: toDate || undefined,
+      })
+    } catch {
+      setListError('Export failed.')
+    } finally {
+      setExportBusy(false)
     }
   }
 
@@ -370,25 +386,34 @@ export function Journal() {
         title="Journal Entries"
         sub={`${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`}
       >
-        {canWrite && (
-          <>
-            <input
-              ref={importFileRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleImport}
-            />
-            <button
-              onClick={() => importFileRef.current?.click()}
-              disabled={importBusy}
-              className={cls.btnSecondary}
-            >
-              {importBusy ? 'Importing…' : 'Import CSV'}
-            </button>
-            <button onClick={openNew} className={cls.btnPrimary}>+ New Entry</button>
-          </>
-        )}
+        <>
+          <button
+            onClick={handleExport}
+            disabled={exportBusy}
+            className={cls.btnSecondary}
+          >
+            {exportBusy ? 'Exporting…' : 'Export CSV'}
+          </button>
+          {canWrite && (
+            <>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <button
+                onClick={() => importFileRef.current?.click()}
+                disabled={importBusy}
+                className={cls.btnSecondary}
+              >
+                {importBusy ? 'Importing…' : 'Import CSV'}
+              </button>
+              <button onClick={openNew} className={cls.btnPrimary}>+ New Entry</button>
+            </>
+          )}
+        </>
       </PageHeader>
 
       {/* Date filter */}

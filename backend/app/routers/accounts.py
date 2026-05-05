@@ -1,7 +1,7 @@
 import csv
 import io
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,33 @@ def list_accounts(
     if prefix:
         q = q.filter(Account.code.ilike(f"{prefix}%"))
     return q.order_by(Account.code).all()
+
+
+@router.get("/export-csv")
+def export_accounts_csv(
+    search: str | None = Query(None),
+    prefix: str | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    q = db.query(Account)
+    if search:
+        term = f"%{search}%"
+        q = q.filter(Account.name.ilike(term) | Account.code.ilike(term))
+    if prefix:
+        q = q.filter(Account.code.ilike(f"{prefix}%"))
+    accounts = q.order_by(Account.code).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["code", "name"])
+    for a in accounts:
+        writer.writerow([a.code, a.name])
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="accounts.csv"'},
+    )
 
 
 @router.get("/{code}", response_model=AccountRead)

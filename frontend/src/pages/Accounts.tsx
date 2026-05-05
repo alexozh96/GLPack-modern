@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { listAccounts, createAccount, updateAccount, deleteAccount, importAccountsCsv } from '../api/accounts'
+import { listAccounts, createAccount, updateAccount, deleteAccount, importAccountsCsv, exportAccountsCsv } from '../api/accounts'
 import type { Account } from '../api/accounts'
 import { PageHeader, cls } from '../components/ui'
 
@@ -50,6 +50,8 @@ export function Accounts() {
   const [importBusy, setImportBusy] = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [exportBusy, setExportBusy] = useState(false)
 
   function load() {
     setLoading(true)
@@ -118,6 +120,17 @@ export function Accounts() {
     }
   }
 
+  async function handleExport() {
+    setExportBusy(true)
+    try {
+      await exportAccountsCsv(search || undefined, prefix || undefined)
+    } catch {
+      setLoadError('Export failed.')
+    } finally {
+      setExportBusy(false)
+    }
+  }
+
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -142,27 +155,36 @@ export function Accounts() {
         title="Chart of Accounts"
         sub={`${accounts.length} accounts total`}
       >
-        {isAdmin && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleImport}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importBusy}
-              className={cls.btnSecondary}
-            >
-              {importBusy ? 'Importing…' : 'Import CSV'}
-            </button>
-            <button onClick={openCreate} className={cls.btnPrimary}>
-              + New Account
-            </button>
-          </>
-        )}
+        <>
+          <button
+            onClick={handleExport}
+            disabled={exportBusy}
+            className={cls.btnSecondary}
+          >
+            {exportBusy ? 'Exporting…' : 'Export CSV'}
+          </button>
+          {isAdmin && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importBusy}
+                className={cls.btnSecondary}
+              >
+                {importBusy ? 'Importing…' : 'Import CSV'}
+              </button>
+              <button onClick={openCreate} className={cls.btnPrimary}>
+                + New Account
+              </button>
+            </>
+          )}
+        </>
       </PageHeader>
 
       {/* Filters */}

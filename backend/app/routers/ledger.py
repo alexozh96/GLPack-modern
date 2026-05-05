@@ -3,7 +3,7 @@ import io
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -67,6 +67,45 @@ def list_ledger(
             )
         )
     return result
+
+
+@router.get("/export-csv")
+def export_ledger_csv(
+    account: str | None = Query(None),
+    from_date: date | None = Query(None),
+    to_date: date | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    q = db.query(LedgerEntry)
+    if account:
+        q = q.filter(LedgerEntry.account == account.strip().upper())
+    if from_date:
+        q = q.filter(LedgerEntry.date >= from_date)
+    if to_date:
+        q = q.filter(LedgerEntry.date <= to_date)
+    entries = q.order_by(LedgerEntry.date, LedgerEntry.trx_no, LedgerEntry.id).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["date", "trx_no", "account", "particular", "dr_amount", "cr_amount"])
+    for e in entries:
+        writer.writerow([e.date, e.trx_no, e.account, e.particular,
+                         f"{e.dr_amount:.2f}", f"{e.cr_amount:.2f}"])
+
+    parts = ["journal_entries"]
+    if account:
+        parts.append(account.upper())
+    if from_date:
+        parts.append(str(from_date))
+    if to_date:
+        parts.append(str(to_date))
+    filename = "_".join(parts) + ".csv"
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/import-csv", response_model=CsvImportResult)
