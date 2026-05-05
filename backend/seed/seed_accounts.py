@@ -1,14 +1,17 @@
 """Import ACCLIST.DBF → accounts table (516 records expected)."""
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from dotenv import load_dotenv
 from dbfread import DBF
 from app.database import SessionLocal
 from app.models.account import Account
 
-DBF_PATH = Path(r"C:\Users\Alex\OneDrive\Documents\GLPACK\ACCLIST.DBF")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+DBF_PATH = Path(os.environ["GLPACK_DATA_DIR"]) / "ACCLIST.DBF"
 
 
 def seed_accounts(session=None) -> int:

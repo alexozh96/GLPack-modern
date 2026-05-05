@@ -4,7 +4,7 @@ title GLPack Modern
 set ROOT=%~dp0
 set BACKEND=%~dp0backend
 set FRONTEND=%~dp0frontend
-set VENV=%~dp0.venv\Scripts\activate.bat
+set VENV=%~dp0backend\venv\Scripts\activate.bat
 
 echo Starting GLPack Modern...
 echo.

@@ -1,4 +1,5 @@
 """Import GLEDGER.DBF → ledger table (181 records expected)."""
+import os
 import sys
 from datetime import date
 from decimal import Decimal
@@ -6,11 +7,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from dotenv import load_dotenv
 from dbfread import DBF
 from app.database import SessionLocal
 from app.models.ledger import LedgerEntry
 
-DBF_PATH = Path(r"C:\Users\Alex\OneDrive\Documents\GLPACK\GLEDGER.DBF")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+DBF_PATH = Path(os.environ["GLPACK_DATA_DIR"]) / "GLEDGER.DBF"
 
 
 def _to_decimal(value) -> Decimal:

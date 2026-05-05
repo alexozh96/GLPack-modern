@@ -1,14 +1,17 @@
 """Import GLPHRASE.DBF → phrases table (1794 records expected, ~1788 unique combos)."""
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from dotenv import load_dotenv
 from dbfread import DBF
 from app.database import SessionLocal
 from app.models.phrase import Phrase
 
-DBF_PATH = Path(r"C:\Users\Alex\OneDrive\Documents\GLPACK\GLPHRASE.DBF")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+DBF_PATH = Path(os.environ["GLPACK_DATA_DIR"]) / "GLPHRASE.DBF"
 
 
 def seed_phrases(session=None) -> int:

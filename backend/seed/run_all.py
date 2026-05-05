@@ -16,19 +16,31 @@ def main():
     session = SessionLocal()
     try:
         print("Seeding accounts...", end=" ", flush=True)
-        n = seed_accounts(session)
-        session.commit()
-        print(f"{n} rows")
+        try:
+            n = seed_accounts(session)
+            session.commit()
+            print(f"{n} rows")
+        except Exception as exc:
+            session.rollback()
+            print(f"skipped ({exc})")
 
         print("Seeding phrases...", end=" ", flush=True)
-        n = seed_phrases(session)
-        session.commit()
-        print(f"{n} rows")
+        try:
+            n = seed_phrases(session)
+            session.commit()
+            print(f"{n} rows")
+        except Exception as exc:
+            session.rollback()
+            print(f"skipped ({exc})")
 
         print("Seeding ledger...", end=" ", flush=True)
-        n = seed_ledger(session)
-        session.commit()
-        print(f"{n} rows")
+        try:
+            n = seed_ledger(session)
+            session.commit()
+            print(f"{n} rows")
+        except Exception as exc:
+            session.rollback()
+            print(f"skipped ({exc})")
 
         print("Seeding setup...", end=" ", flush=True)
         n = seed_setup(session)
