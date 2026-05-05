@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
+import { SetupProvider } from './context/SetupContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
@@ -24,8 +25,10 @@ function App() {
             path="/"
             element={
               <ProtectedRoute>
+              <SetupProvider>
                 <Layout />
-              </ProtectedRoute>
+              </SetupProvider>
+            </ProtectedRoute>
             }
           >
             <Route index element={<Navigate to="/dashboard" replace />} />

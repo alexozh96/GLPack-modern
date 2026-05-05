@@ -174,13 +174,18 @@ export function Settings() {
             disabled={!isAdmin}
             placeholder="USD"
           />
-          <Field
-            label="Financial Year End"
-            value={form.financial_year_end}
-            onChange={v => setForm(f => ({ ...f, financial_year_end: v }))}
-            disabled={!isAdmin}
-            placeholder="2024-12-31"
-          />
+          <div>
+            <Field
+              label="Financial Year End (MM-DD)"
+              value={form.financial_year_end}
+              onChange={v => setForm(f => ({ ...f, financial_year_end: v }))}
+              disabled={!isAdmin}
+              placeholder="12-31"
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              Month and day only — e.g. 06-30 for June 30. The app rolls this forward each year automatically.
+            </p>
+          </div>
         </div>
         <Field
           label="Current Period"

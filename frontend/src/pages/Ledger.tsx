@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useFiscalYear } from '../hooks/useFiscalYear'
 import { getLedger } from '../api/ledger'
 import { downloadLedgerPdf } from '../api/reports'
 import { listAccounts } from '../api/accounts'
@@ -25,12 +26,14 @@ function fmtBalance(v: string): { text: string; label: string; positive: boolean
 export function Ledger() {
   const navigate = useNavigate()
 
+  const { fyStart, fyEnd, ready: fyReady } = useFiscalYear()
+
   const [accounts, setAccounts] = useState<Account[]>([])
   const [account, setAccount] = useState('')         // code sent to API
   const [accountQuery, setAccountQuery] = useState('') // text shown in search input
   const [accountOpen, setAccountOpen] = useState(false)
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
+  const [fromDate, setFromDate] = useState(fyStart)
+  const [toDate, setToDate] = useState(fyEnd)
 
   const [rows, setRows] = useState<LedgerLine[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -42,6 +45,13 @@ export function Ledger() {
   useEffect(() => {
     listAccounts().then(setAccounts).catch(() => {})
   }, [])
+
+  // Sync date inputs when FY context loads (handles async case on first render)
+  useEffect(() => {
+    if (!fyReady) return
+    if (fromDate === '') setFromDate(fyStart)
+    if (toDate === '') setToDate(fyEnd)
+  }, [fyReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadLedger() {
     if (!account) return

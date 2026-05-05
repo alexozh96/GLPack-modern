@@ -120,6 +120,40 @@ glpack-modern/
 
 ---
 
+## Financial Year Configuration
+
+### Setting the financial year end
+
+Go to **Settings → Company Settings → Financial Year End (MM-DD)** and enter the month and day your financial year ends:
+
+| FY end | Value to enter |
+|--------|---------------|
+| 30 June | `06-30` |
+| 31 December | `12-31` |
+| 31 March | `03-31` |
+
+Save the setting. The app derives the current FY start and end dates automatically and rolls them forward each year — you only need to set this once.
+
+### How defaults are applied
+
+Once configured, the financial year dates are used as the default filter on:
+
+- **Dashboard** — automatically selects the *Financial Year* preset and loads KPIs and charts for that range
+- **Journal** — date filter inputs are pre-populated with the FY start and end; the initial list loads within that range
+- **Ledger** — date inputs are pre-populated; select an account and click Load to view within the FY range
+
+### Overriding the defaults
+
+| Page | How to override |
+|------|----------------|
+| Dashboard | Click any preset in the strip: **Financial Year \| Year to Date \| This Quarter \| This Month \| Custom**. Custom reveals two date inputs. Changes take effect immediately. |
+| Journal | Edit the From / To date fields and click **Apply**. Click **Clear** to remove date filtering entirely. |
+| Ledger | Edit the From / To date fields and click **Load**. |
+
+Overrides are session-only — navigating away and back restores the FY defaults.
+
+---
+
 ## Running Tests
 
 ```bash

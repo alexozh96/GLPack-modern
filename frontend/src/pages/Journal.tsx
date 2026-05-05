@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useFiscalYear } from '../hooks/useFiscalYear'
 import { listJournals, getJournal, createJournal, updateJournal, deleteJournal, bulkDeleteJournals } from '../api/journal'
 import { listAccounts } from '../api/accounts'
 import { listPhrases } from '../api/phrases'
@@ -104,14 +105,16 @@ export function Journal() {
   const canWrite = (user?.access_level ?? 0) >= 3
   const toast = useToast()
 
+  const { fyStart, fyEnd, ready: fyReady } = useFiscalYear()
+
   const [view, setView] = useState<'list' | 'form'>('list')
   const [editingTrxNo, setEditingTrxNo] = useState<string | null>(null)
 
   const [entries, setEntries] = useState<JournalSummary[]>([])
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
+  const [fromDate, setFromDate] = useState(fyStart)
+  const [toDate, setToDate] = useState(fyEnd)
   const tc = useTableControls()
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -161,10 +164,13 @@ export function Journal() {
   }))
 
   useEffect(() => {
-    loadList()
+    if (!fyReady) return
+    setFromDate(fyStart)
+    setToDate(fyEnd)
+    loadList(fyStart, fyEnd)
     listAccounts().then(setAccounts).catch(() => {})
     listPhrases().then(setPhrases).catch(() => {})
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fyReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const state = location.state as { openTrx?: string } | null
