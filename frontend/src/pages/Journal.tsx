@@ -347,7 +347,7 @@ export function Journal() {
       </PageHeader>
 
       {/* Date filter */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 flex gap-3 items-center flex-wrap">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 flex gap-3 items-center flex-wrap">
         <input
           type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
           className={cls.input}

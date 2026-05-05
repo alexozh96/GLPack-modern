@@ -24,7 +24,7 @@ function monthLabel(yyyymm: string): string {
 
 function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm min-h-[110px] flex flex-col justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm min-h-[128px] flex flex-col justify-between">
       <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">{label}</p>
       <div>
         <p className="text-2xl font-bold text-slate-800 font-mono mt-3">{value}</p>
@@ -39,7 +39,7 @@ function QuickAction({ label, onClick, disabled }: { label: string; onClick: () 
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full text-left px-4 py-3.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-[#0875e1]/40 hover:bg-[#0875e1]/[0.03] hover:text-[#0875e1] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      className="w-full text-left h-11 px-3 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#0875e1] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
     >
       {label}
     </button>
@@ -134,10 +134,10 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         {/* Monthly activity chart */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <h3 className={`${cls.cardTitle} mb-5`}>Monthly Transaction Volume</h3>
           {monthlyData.length === 0 ? (
-            <div className="flex items-center justify-center h-40 text-slate-400 text-sm">
+            <div className="flex items-center justify-center min-h-[220px] text-slate-400 text-sm">
               No data available
             </div>
           ) : (
@@ -168,8 +168,8 @@ export function Dashboard() {
         </div>
 
         {/* Quick actions */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <h3 className={`${cls.cardTitle} mb-4`}>Quick Actions</h3>
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <h3 className={`${cls.cardTitle} mb-3`}>Quick Actions</h3>
           <div className="space-y-2">
             <QuickAction label="New Journal Entry"      onClick={() => navigate('/journal')}  disabled={!canWrite} />
             <QuickAction label="Chart of Accounts"     onClick={() => navigate('/accounts')} />

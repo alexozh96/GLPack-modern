@@ -91,7 +91,7 @@ export function Ledger() {
       </PageHeader>
 
       {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 flex gap-3 items-center flex-wrap">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 flex gap-3 items-center flex-wrap">
         <select
           value={account}
           onChange={e => { setAccount(e.target.value); setLoaded(false) }}
@@ -139,7 +139,7 @@ export function Ledger() {
       {loaded && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           {rows.length === 0 ? (
-            <div className="p-6 text-center text-slate-400 text-sm">
+            <div className="p-8 text-center text-slate-400 text-sm">
               No transactions found for this account.
             </div>
           ) : (
@@ -207,7 +207,7 @@ export function Ledger() {
       )}
 
       {!loaded && !loading && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
+        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 text-sm">
           Select an account and click Load to view its ledger.
         </div>
       )}
