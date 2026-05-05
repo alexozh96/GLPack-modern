@@ -18,3 +18,17 @@ export async function getLedger(params: {
   const res = await api.get<LedgerLine[]>('/ledger', { params })
   return res.data
 }
+
+export interface LedgerImportResult {
+  imported_rows: number
+  imported_transactions: number
+}
+
+export async function importLedgerCsv(file: File): Promise<LedgerImportResult> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await api.post<LedgerImportResult>('/ledger/import-csv', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data
+}

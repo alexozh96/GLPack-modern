@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { listJournals, getJournal, createJournal, updateJournal, deleteJournal } from '../api/journal'
 import { listAccounts } from '../api/accounts'
 import { listPhrases } from '../api/phrases'
+import { importLedgerCsv } from '../api/ledger'
 import type { JournalSummary } from '../api/journal'
 import type { Account } from '../api/accounts'
 import type { Phrase } from '../api/phrases'
@@ -100,6 +101,10 @@ export function Journal() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [phrases, setPhrases] = useState<Phrase[]>([])
 
+  const [importBusy, setImportBusy] = useState(false)
+  const [importResult, setImportResult] = useState<string | null>(null)
+  const importFileRef = useRef<HTMLInputElement>(null)
+
   const [formDate, setFormDate] = useState(todayStr())
   const [rows, setRows] = useState<FormRow[]>([emptyRow(), emptyRow()])
   const [formBusy, setFormBusy] = useState(false)
@@ -154,6 +159,24 @@ export function Journal() {
         toast.error('This entry is in a locked period and cannot be deleted.')
     } finally {
       setDeleteBusy(false)
+    }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setImportBusy(true)
+    setImportResult(null)
+    setListError(null)
+    try {
+      const result = await importLedgerCsv(file)
+      setImportResult(`Imported ${result.imported_rows} rows across ${result.imported_transactions} transaction${result.imported_transactions !== 1 ? 's' : ''}`)
+      loadList()
+    } catch (err) {
+      setListError(apiError(err))
+    } finally {
+      setImportBusy(false)
     }
   }
 
@@ -348,7 +371,23 @@ export function Journal() {
         sub={`${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`}
       >
         {canWrite && (
-          <button onClick={openNew} className={cls.btnPrimary}>+ New Entry</button>
+          <>
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImport}
+            />
+            <button
+              onClick={() => importFileRef.current?.click()}
+              disabled={importBusy}
+              className={cls.btnSecondary}
+            >
+              {importBusy ? 'Importing…' : 'Import CSV'}
+            </button>
+            <button onClick={openNew} className={cls.btnPrimary}>+ New Entry</button>
+          </>
         )}
       </PageHeader>
 
@@ -371,6 +410,11 @@ export function Journal() {
         )}
       </div>
 
+      {importResult && (
+        <div className="bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg px-4 py-3">
+          {importResult}
+        </div>
+      )}
       {listError && <div className={cls.alertError}>{listError}</div>}
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">

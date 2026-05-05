@@ -1,10 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+import csv
+import io
+
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth import AdminAccess, get_current_user
 from app.database import get_db
 from app.models.account import Account
 from app.schemas.account import AccountCreate, AccountRead, AccountUpdate
+
+
+class AccountImportResult(BaseModel):
+    imported: int
+    skipped: int
 
 router = APIRouter(prefix="/accounts", tags=["accounts"], dependencies=[Depends(get_current_user)])
 
@@ -61,3 +70,37 @@ def delete_account(code: str, _: AdminAccess, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Account not found")
     db.delete(account)
     db.commit()
+
+
+@router.post("/import-csv", response_model=AccountImportResult)
+async def import_accounts_csv(file: UploadFile, _: AdminAccess, db: Session = Depends(get_db)):
+    content = await file.read()
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+    if reader.fieldnames is None:
+        raise HTTPException(400, "Empty or unreadable CSV")
+
+    norm = {k.strip().lower(): k for k in reader.fieldnames}
+    missing = {"code", "name"} - set(norm)
+    if missing:
+        raise HTTPException(400, f"CSV missing column(s): {', '.join(sorted(missing))}")
+
+    imported = skipped = 0
+    for row in reader:
+        code = row.get(norm["code"], "").strip().upper()[:4]
+        name = row.get(norm["name"], "").strip()[:30]
+        if not code or not name:
+            skipped += 1
+            continue
+        if db.get(Account, code):
+            skipped += 1
+            continue
+        db.add(Account(code=code, name=name))
+        imported += 1
+
+    db.commit()
+    return AccountImportResult(imported=imported, skipped=skipped)

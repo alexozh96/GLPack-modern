@@ -1,0 +1,33 @@
+code,name
+CB01,DBS Current Account
+CB02,UOB Savings Account
+TD01,Fixed Deposit OCBC
+AR01,Accounts Receivable
+PR01,Prepaid Expenses
+FA01,Office Equipment
+FA02,Furniture and Fittings
+DA01,Accum Dep - Equipment
+DA02,Accum Dep - Furniture
+AP01,Accounts Payable
+AC01,Accrued Expenses
+CP01,CPF Payable
+GS01,GST Output
+SC01,Share Capital
+PL01,Retained Earnings
+SA01,Consulting Fees
+SA02,Project Revenue
+SA03,Retainer Fees
+CO01,Subcontractor Fees
+CO02,Project Materials
+OI01,Interest Income
+EX01,Salaries
+EX02,CPF - Employer
+EX03,Office Rent
+EX04,Utilities
+EX05,Office Supplies
+EX06,Telecoms
+EX07,Professional Fees
+EX08,Insurance
+EX09,Dep - Equipment
+EX10,Dep - Furniture
+TX01,Income Tax Expense

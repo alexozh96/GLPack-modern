@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { listAccounts, createAccount, updateAccount, deleteAccount } from '../api/accounts'
+import { listAccounts, createAccount, updateAccount, deleteAccount, importAccountsCsv } from '../api/accounts'
 import type { Account } from '../api/accounts'
 import { PageHeader, cls } from '../components/ui'
 
@@ -46,6 +46,10 @@ export function Accounts() {
 
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
+
+  const [importBusy, setImportBusy] = useState(false)
+  const [importResult, setImportResult] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function load() {
     setLoading(true)
@@ -114,6 +118,24 @@ export function Accounts() {
     }
   }
 
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setImportBusy(true)
+    setImportResult(null)
+    setLoadError(null)
+    try {
+      const result = await importAccountsCsv(file)
+      setImportResult(`Imported ${result.imported}, skipped ${result.skipped}`)
+      load()
+    } catch (err) {
+      setLoadError(apiErrorMessage(err))
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -121,9 +143,25 @@ export function Accounts() {
         sub={`${accounts.length} accounts total`}
       >
         {isAdmin && (
-          <button onClick={openCreate} className={cls.btnPrimary}>
-            + New Account
-          </button>
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImport}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importBusy}
+              className={cls.btnSecondary}
+            >
+              {importBusy ? 'Importing…' : 'Import CSV'}
+            </button>
+            <button onClick={openCreate} className={cls.btnPrimary}>
+              + New Account
+            </button>
+          </>
         )}
       </PageHeader>
 
@@ -147,6 +185,11 @@ export function Accounts() {
         </select>
       </div>
 
+      {importResult && (
+        <div className="bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg px-4 py-3">
+          {importResult}
+        </div>
+      )}
       {loadError && <div className={cls.alertError}>{loadError}</div>}
 
       {/* Table */}
