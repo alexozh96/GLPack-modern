@@ -10,6 +10,7 @@ import {
   unmatchEntry,
 } from '../api/reconciliation'
 import type { BankRowRead, GlEntryRead, MatchedPairRead, ReconcSummary } from '../api/reconciliation'
+import { PageHeader, cls } from '../components/ui'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,14 +26,14 @@ function fmtAmt(v: string | number): string {
 function SummaryBar({ summary }: { summary: ReconcSummary | null }) {
   if (!summary) return null
   return (
-    <div className="flex gap-4 text-sm">
-      <span className="px-3 py-1 bg-slate-100 rounded-full text-slate-600">
+    <div className="flex gap-3 text-sm flex-wrap">
+      <span className="px-3 py-1.5 bg-slate-100 rounded-full text-slate-600 font-medium">
         Total: <strong>{summary.total}</strong>
       </span>
-      <span className="px-3 py-1 bg-green-100 rounded-full text-green-700">
+      <span className="px-3 py-1.5 bg-green-50 border border-green-200 rounded-full text-green-700 font-medium">
         Matched: <strong>{summary.matched}</strong>
       </span>
-      <span className="px-3 py-1 bg-amber-100 rounded-full text-amber-700">
+      <span className="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-amber-700 font-medium">
         Unmatched: <strong>{summary.unmatched}</strong>
       </span>
     </div>
@@ -116,10 +117,9 @@ export function BankReconciliation() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-bold text-slate-800">Bank Reconciliation</h2>
+      <PageHeader title="Bank Reconciliation">
         <SummaryBar summary={summary} />
-      </div>
+      </PageHeader>
 
       {/* CSV import */}
       {canWrite && (
@@ -129,7 +129,7 @@ export function BankReconciliation() {
           <button
             onClick={() => fileRef.current?.click()}
             disabled={importing}
-            className="px-4 py-1.5 bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors shadow-sm"
+            className={cls.btnPrimary}
           >
             {importing ? 'Importing…' : 'Choose File'}
           </button>
@@ -151,7 +151,7 @@ export function BankReconciliation() {
             {/* Unmatched bank rows */}
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-                <h3 className="text-sm font-semibold text-slate-700">
+                <h3 className={cls.cardTitle}>
                   Unmatched Bank Rows
                   <span className="ml-2 text-xs font-normal text-slate-400">({bankRows.length})</span>
                 </h3>
@@ -165,7 +165,7 @@ export function BankReconciliation() {
                       key={row.id}
                       onClick={() => setSelectedBank(selectedBank === row.id ? null : row.id)}
                       className={`w-full text-left px-4 py-2.5 transition-colors ${
-                        selectedBank === row.id ? 'bg-blue-50 border-l-2 border-blue-500' : 'hover:bg-slate-50'
+                        selectedBank === row.id ? 'bg-[#0875e1]/[0.06] border-l-2 border-[#0875e1]' : 'hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex justify-between items-center">
@@ -184,7 +184,7 @@ export function BankReconciliation() {
             {/* Unmatched GL cash entries */}
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-                <h3 className="text-sm font-semibold text-slate-700">
+                <h3 className={cls.cardTitle}>
                   Unmatched GL Cash Entries
                   <span className="ml-2 text-xs font-normal text-slate-400">({glEntries.length})</span>
                 </h3>
@@ -198,7 +198,7 @@ export function BankReconciliation() {
                       key={entry.id}
                       onClick={() => setSelectedGl(selectedGl === entry.id ? null : entry.id)}
                       className={`w-full text-left px-4 py-2.5 transition-colors ${
-                        selectedGl === entry.id ? 'bg-blue-50 border-l-2 border-blue-500' : 'hover:bg-slate-50'
+                        selectedGl === entry.id ? 'bg-[#0875e1]/[0.06] border-l-2 border-[#0875e1]' : 'hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex justify-between items-center">
@@ -218,17 +218,13 @@ export function BankReconciliation() {
           {/* Match button */}
           {canWrite && (
             <div className="flex items-center gap-3">
-              <button
-                onClick={handleMatch}
-                disabled={!canMatch}
-                className="px-4 py-2 bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium rounded-lg disabled:opacity-40 transition-colors shadow-sm"
-              >
+              <button onClick={handleMatch} disabled={!canMatch} className={cls.btnPrimary}>
                 Match Selected
               </button>
               {!canMatch && (selectedBank !== null || selectedGl !== null) && (
                 <span className="text-xs text-slate-400">Select one item from each column</span>
               )}
-              {matchErr && <span className="text-sm text-red-600">{matchErr}</span>}
+              {matchErr && <span className={cls.alertError}>{matchErr}</span>}
             </div>
           )}
 
@@ -236,7 +232,7 @@ export function BankReconciliation() {
           {matchedPairs.length > 0 && (
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-                <h3 className="text-sm font-semibold text-slate-700">
+                <h3 className={cls.cardTitle}>
                   Matched Pairs
                   <span className="ml-2 text-xs font-normal text-slate-400">({matchedPairs.length})</span>
                 </h3>
@@ -244,33 +240,33 @@ export function BankReconciliation() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Bank Date</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Bank Description</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Bank Amount</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">GL TRX</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">GL Particular</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">GL Dr/Cr</th>
+                    <th className={cls.th}>Bank Date</th>
+                    <th className={cls.th}>Bank Description</th>
+                    <th className={cls.thRight}>Bank Amount</th>
+                    <th className={cls.th}>GL TRX</th>
+                    <th className={cls.th}>GL Particular</th>
+                    <th className={cls.thRight}>GL Dr/Cr</th>
                     {canWrite && <th className="px-4 py-2" />}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {matchedPairs.map(pair => (
-                    <tr key={pair.bank_id} className="hover:bg-slate-50">
-                      <td className="px-4 py-2.5 text-slate-500">{pair.bank_date}</td>
-                      <td className="px-4 py-2.5 text-slate-700 truncate max-w-[160px]">{pair.bank_description}</td>
-                      <td className={`px-4 py-2.5 text-right font-mono ${parseFloat(pair.bank_amount) < 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                    <tr key={pair.bank_id} className="hover:bg-[#0875e1]/[0.03] transition-colors">
+                      <td className={cls.td}>{pair.bank_date}</td>
+                      <td className={`${cls.td} truncate max-w-[160px]`}>{pair.bank_description}</td>
+                      <td className={`${cls.tdRight} ${parseFloat(pair.bank_amount) < 0 ? 'text-red-600' : ''}`}>
                         {fmtAmt(pair.bank_amount)}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-slate-500">{pair.gl_trx_no}</td>
-                      <td className="px-4 py-2.5 text-slate-700 truncate max-w-[160px]">{pair.gl_particular}</td>
-                      <td className="px-4 py-2.5 text-right font-mono text-slate-700">
+                      <td className={cls.tdMono}>{pair.gl_trx_no}</td>
+                      <td className={`${cls.td} truncate max-w-[160px]`}>{pair.gl_particular}</td>
+                      <td className={cls.tdRight}>
                         {parseFloat(pair.gl_dr_amount) > 0 ? `Dr ${fmtAmt(pair.gl_dr_amount)}` : `Cr ${fmtAmt(pair.gl_cr_amount)}`}
                       </td>
                       {canWrite && (
-                        <td className="px-4 py-2.5 text-right">
+                        <td className="px-5 py-3.5 text-right">
                           <button
                             onClick={() => handleUnmatch(pair.bank_id)}
-                            className="text-xs text-red-500 hover:text-red-700"
+                            className="text-xs text-red-500 hover:text-red-700 font-medium"
                           >
                             Unmatch
                           </button>

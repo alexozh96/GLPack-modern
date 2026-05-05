@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { getProfitLoss } from '../api/reports'
 import { listJournals } from '../api/journal'
 import type { JournalSummary } from '../api/journal'
+import { PageHeader, cls } from '../components/ui'
 
 function thisYear() {
   const y = new Date().getFullYear()
@@ -107,15 +108,10 @@ export function Dashboard() {
 
   return (
     <div className="space-y-7">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Dashboard</h2>
-          <p className="text-sm text-slate-400 mt-1">Year to date — {yearStart} to today</p>
-        </div>
-      </div>
+      <PageHeader title="Dashboard" sub={`Year to date — ${yearStart} to today`} />
 
       {partial && (
-        <div className="px-4 py-3 bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg">
+        <div className={cls.alertWarning}>
           Some data could not be loaded. Is the backend running?
         </div>
       )}
@@ -139,7 +135,7 @@ export function Dashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         {/* Monthly activity chart */}
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-700 mb-5">Monthly Transaction Volume</h3>
+          <h3 className={`${cls.cardTitle} mb-5`}>Monthly Transaction Volume</h3>
           {monthlyData.length === 0 ? (
             <div className="flex items-center justify-center h-40 text-slate-400 text-sm">
               No data available
@@ -173,7 +169,7 @@ export function Dashboard() {
 
         {/* Quick actions */}
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Quick Actions</h3>
+          <h3 className={`${cls.cardTitle} mb-4`}>Quick Actions</h3>
           <div className="space-y-2">
             <QuickAction label="New Journal Entry"      onClick={() => navigate('/journal')}  disabled={!canWrite} />
             <QuickAction label="Chart of Accounts"     onClick={() => navigate('/accounts')} />
@@ -186,7 +182,7 @@ export function Dashboard() {
       {/* Recent journal entries */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">Recent Journal Entries</h3>
+          <h3 className={cls.cardTitle}>Recent Journal Entries</h3>
           <button
             onClick={() => navigate('/journal')}
             className="text-xs text-[#0875e1] hover:text-[#0667c8] font-medium"
@@ -202,10 +198,10 @@ export function Dashboard() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-20">TRX</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Description</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Amount</th>
+                <th className={`${cls.th} w-20`}>TRX</th>
+                <th className={`${cls.th} w-28`}>Date</th>
+                <th className={cls.th}>Description</th>
+                <th className={`${cls.thRight} w-28`}>Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -215,10 +211,10 @@ export function Dashboard() {
                   onClick={() => navigate('/journal')}
                   className="hover:bg-[#0875e1]/[0.03] cursor-pointer transition-colors"
                 >
-                  <td className="px-5 py-3.5 font-mono text-slate-600 text-sm">{e.trx_no}</td>
-                  <td className="px-4 py-3.5 text-slate-500 text-sm">{e.date}</td>
-                  <td className="px-4 py-3.5 text-slate-700 text-sm truncate max-w-xs">{e.description}</td>
-                  <td className="px-5 py-3.5 text-right font-mono text-slate-700 text-sm">{fmtAmt(e.total_dr)}</td>
+                  <td className={cls.tdMono}>{e.trx_no}</td>
+                  <td className={cls.td}>{e.date}</td>
+                  <td className={`${cls.td} truncate max-w-xs`}>{e.description}</td>
+                  <td className={cls.tdRight}>{fmtAmt(e.total_dr)}</td>
                 </tr>
               ))}
             </tbody>

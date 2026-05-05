@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { listAccounts, createAccount, updateAccount, deleteAccount } from '../api/accounts'
 import type { Account } from '../api/accounts'
+import { PageHeader, cls } from '../components/ui'
 
 const PREFIX_OPTIONS = [
   { value: '', label: 'All categories' },
@@ -25,8 +26,6 @@ function apiErrorMessage(err: unknown): string {
   }
   return 'An unexpected error occurred.'
 }
-
-const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors'
 
 export function Accounts() {
   const { user } = useAuth()
@@ -117,21 +116,16 @@ export function Accounts() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">Chart of Accounts</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{accounts.length} accounts total</p>
-        </div>
+      <PageHeader
+        title="Chart of Accounts"
+        sub={`${accounts.length} accounts total`}
+      >
         {isAdmin && (
-          <button
-            onClick={openCreate}
-            className="bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition-colors"
-          >
+          <button onClick={openCreate} className={cls.btnPrimary}>
             + New Account
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
@@ -140,12 +134,12 @@ export function Accounts() {
           placeholder="Search code or name…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+          className={`${cls.input} w-56`}
         />
         <select
           value={prefix}
           onChange={e => setPrefix(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors bg-white"
+          className={cls.select}
         >
           {PREFIX_OPTIONS.map(o => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -153,11 +147,7 @@ export function Accounts() {
         </select>
       </div>
 
-      {loadError && (
-        <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-          {loadError}
-        </div>
-      )}
+      {loadError && <div className={cls.alertError}>{loadError}</div>}
 
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
@@ -169,16 +159,16 @@ export function Accounts() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-24">Code</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</th>
+                <th className={`${cls.th} w-24`}>Code</th>
+                <th className={cls.th}>Name</th>
                 {isAdmin && <th className="w-32" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map(account => (
                 <tr key={account.code} className="hover:bg-[#0875e1]/[0.03] transition-colors">
-                  <td className="px-5 py-3.5 font-mono text-slate-700 text-sm">{account.code}</td>
-                  <td className="px-4 py-3.5 text-slate-800 text-sm">{account.name}</td>
+                  <td className={cls.tdMono}>{account.code}</td>
+                  <td className={cls.td}>{account.name}</td>
                   {isAdmin && (
                     <td className="px-5 py-3.5 text-right">
                       {deleteTarget?.code === account.code ? (
@@ -233,7 +223,7 @@ export function Accounts() {
                   value={formCode}
                   onChange={e => setFormCode(e.target.value.toUpperCase().slice(0, 4))}
                   disabled={modal.mode === 'edit'}
-                  className={`${inputCls} font-mono disabled:bg-slate-50 disabled:text-slate-400`}
+                  className={`w-full ${cls.input} font-mono`}
                   required
                   autoFocus={modal.mode === 'create'}
                 />
@@ -246,28 +236,24 @@ export function Accounts() {
                   type="text"
                   value={formName}
                   onChange={e => setFormName(e.target.value.slice(0, 30))}
-                  className={inputCls}
+                  className={`w-full ${cls.input}`}
                   required
                   autoFocus={modal.mode === 'edit'}
                 />
               </div>
-              {formError && (
-                <div className="px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  {formError}
-                </div>
-              )}
+              {formError && <div className={cls.alertError}>{formError}</div>}
               <div className="flex gap-3 pt-1">
                 <button
                   type="submit"
                   disabled={formBusy}
-                  className="flex-1 bg-[#0875e1] hover:bg-[#0667c8] text-white rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors shadow-sm"
+                  className={`flex-1 ${cls.btnPrimary}`}
                 >
                   {formBusy ? 'Saving…' : 'Save'}
                 </button>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 border border-slate-200 text-slate-600 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors"
+                  className={`flex-1 ${cls.btnSecondary}`}
                 >
                   Cancel
                 </button>

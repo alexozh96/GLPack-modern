@@ -5,6 +5,7 @@ import { closePeriod } from '../api/period'
 import { listPhrases, createPhrase, deletePhrase } from '../api/phrases'
 import type { SetupData } from '../api/setup'
 import type { Phrase } from '../api/phrases'
+import { PageHeader, cls } from '../components/ui'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ function Field({
         onChange={e => onChange(e.target.value)}
         disabled={disabled}
         placeholder={placeholder ?? ''}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+        className={`w-full ${cls.input}`}
       />
     </div>
   )
@@ -109,7 +110,6 @@ export function Settings() {
       setCloseResult(
         `Period closed through ${res.locked_before}. ${res.closing_lines_written} closing line(s) written. Net profit: ${res.net_profit}.`,
       )
-      // Refresh setup so locked_before is current
       const updated = await getSetup()
       setSetup(updated)
     } catch (err: unknown) {
@@ -151,17 +151,13 @@ export function Settings() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h2 className="text-xl font-bold text-slate-800">Settings</h2>
+      <PageHeader title="Settings" />
 
-      {loadErr && (
-        <div className="px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-          {loadErr}
-        </div>
-      )}
+      {loadErr && <div className={cls.alertError}>{loadErr}</div>}
 
       {/* Company settings */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-slate-700">Company Settings</h3>
+        <h3 className={cls.cardTitle}>Company Settings</h3>
 
         <Field
           label="Company Name"
@@ -196,11 +192,7 @@ export function Settings() {
 
         {isAdmin && (
           <div className="flex items-center gap-3 pt-1">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors shadow-sm"
-            >
+            <button onClick={handleSave} disabled={saving} className={cls.btnPrimary}>
               {saving ? 'Saving…' : 'Save Settings'}
             </button>
             {saveMsg && (
@@ -218,7 +210,7 @@ export function Settings() {
 
       {/* Period Close */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-slate-700">Period Close</h3>
+        <h3 className={cls.cardTitle}>Period Close</h3>
 
         <div className="text-sm text-slate-600 space-y-1">
           <p>
@@ -241,28 +233,20 @@ export function Settings() {
                 type="date"
                 value={closeDate}
                 onChange={e => setCloseDate(e.target.value)}
-                className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+                className={cls.input}
               />
             </div>
 
             <button
               onClick={() => setConfirmOpen(true)}
               disabled={!closeDate || closing}
-              className="px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-lg hover:bg-red-800 disabled:opacity-40"
+              className={cls.btnDanger}
             >
               {closing ? 'Closing…' : 'Close Period'}
             </button>
 
-            {closeResult && (
-              <div className="px-4 py-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">
-                {closeResult}
-              </div>
-            )}
-            {closeErr && (
-              <div className="px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-                {closeErr}
-              </div>
-            )}
+            {closeResult && <div className={cls.alertSuccess}>{closeResult}</div>}
+            {closeErr && <div className={cls.alertError}>{closeErr}</div>}
           </div>
         ) : (
           <p className="text-xs text-slate-400">Admin access required to close a period.</p>
@@ -272,13 +256,13 @@ export function Settings() {
       {/* Phrases */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">Journal Phrases</h3>
+          <h3 className={cls.cardTitle}>Journal Phrases</h3>
           <input
             type="text"
             value={phraseSearch}
             onChange={e => { setPhraseSearch(e.target.value); loadPhrases(e.target.value) }}
             placeholder="Search…"
-            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors w-40"
+            className={`${cls.input} w-40`}
           />
         </div>
 
@@ -293,7 +277,7 @@ export function Settings() {
                 onKeyDown={e => e.key === 'Enter' && handleAddPhrase()}
                 placeholder="e.g. Cash sale"
                 maxLength={45}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+                className={`w-full ${cls.input}`}
               />
             </div>
             <div className="w-24">
@@ -304,7 +288,7 @@ export function Settings() {
                 onChange={e => setNewDr(e.target.value.toUpperCase())}
                 placeholder="CB01"
                 maxLength={4}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+                className={`w-full ${cls.input} font-mono`}
               />
             </div>
             <div className="w-24">
@@ -315,13 +299,13 @@ export function Settings() {
                 onChange={e => setNewCr(e.target.value.toUpperCase())}
                 placeholder="SA01"
                 maxLength={4}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+                className={`w-full ${cls.input} font-mono`}
               />
             </div>
             <button
               onClick={handleAddPhrase}
               disabled={!newPhrase.trim() || phraseBusy}
-              className="px-4 py-2 bg-[#0875e1] hover:bg-[#0667c8] text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors shadow-sm"
+              className={cls.btnPrimary}
             >
               {phraseBusy ? 'Adding…' : 'Add'}
             </button>
@@ -335,23 +319,23 @@ export function Settings() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Phrase</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-24">Dr</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-24">Cr</th>
+                <th className={cls.th}>Phrase</th>
+                <th className={`${cls.th} w-24`}>Dr</th>
+                <th className={`${cls.th} w-24`}>Cr</th>
                 {canWrite && <th className="w-16" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {phrases.map(p => (
-                <tr key={p.id} className="hover:bg-slate-50">
-                  <td className="px-5 py-2.5 text-slate-700">{p.phrase}</td>
-                  <td className="px-4 py-2.5 font-mono text-slate-500">{p.dr_code ?? '—'}</td>
-                  <td className="px-4 py-2.5 font-mono text-slate-500">{p.cr_code ?? '—'}</td>
+                <tr key={p.id} className="hover:bg-[#0875e1]/[0.03] transition-colors">
+                  <td className={cls.td}>{p.phrase}</td>
+                  <td className={cls.tdMono}>{p.dr_code ?? '—'}</td>
+                  <td className={cls.tdMono}>{p.cr_code ?? '—'}</td>
                   {canWrite && (
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={() => handleDeletePhrase(p.id)}
-                        className="text-xs text-red-500 hover:text-red-700"
+                        className="text-xs text-red-500 hover:text-red-700 font-medium"
                       >
                         Delete
                       </button>
@@ -375,16 +359,10 @@ export function Settings() {
               This action cannot be undone.
             </p>
             <div className="flex gap-3">
-              <button
-                onClick={handleClose}
-                className="flex-1 px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-lg hover:bg-red-800"
-              >
+              <button onClick={handleClose} className={`flex-1 ${cls.btnDanger}`}>
                 Yes, Close Period
               </button>
-              <button
-                onClick={() => setConfirmOpen(false)}
-                className="flex-1 px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg hover:bg-slate-50"
-              >
+              <button onClick={() => setConfirmOpen(false)} className={`flex-1 ${cls.btnSecondary}`}>
                 Cancel
               </button>
             </div>

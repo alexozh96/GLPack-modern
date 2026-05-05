@@ -5,6 +5,7 @@ import { downloadLedgerPdf } from '../api/reports'
 import { listAccounts } from '../api/accounts'
 import type { LedgerLine } from '../api/ledger'
 import type { Account } from '../api/accounts'
+import { PageHeader, cls } from '../components/ui'
 
 function fmtAmt(v: string | number): string {
   const n = parseFloat(String(v))
@@ -80,27 +81,21 @@ export function Ledger() {
   const totalCr = rows.reduce((s, r) => s + (parseFloat(r.cr_amount) || 0), 0)
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-slate-800">Ledger View</h2>
+    <div className="space-y-5">
+      <PageHeader title="Ledger View">
         {canPdf && (
-          <button
-            onClick={handlePdf}
-            disabled={pdfBusy}
-            className="border border-slate-300 text-slate-700 text-sm px-3 py-1.5 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
-          >
+          <button onClick={handlePdf} disabled={pdfBusy} className={cls.btnSecondary}>
             {pdfBusy ? 'Exporting…' : 'Export PDF'}
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-4 items-center flex-wrap">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 flex gap-3 items-center flex-wrap">
         <select
           value={account}
           onChange={e => { setAccount(e.target.value); setLoaded(false) }}
-          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+          className={cls.select}
         >
           <option value="">Select account…</option>
           {accounts.map(a => (
@@ -112,38 +107,33 @@ export function Ledger() {
           type="date"
           value={fromDate}
           onChange={e => setFromDate(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+          className={cls.input}
         />
         <span className="text-slate-400 text-sm">to</span>
         <input
           type="date"
           value={toDate}
           onChange={e => setToDate(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0875e1]/30 focus:border-[#0875e1] transition-colors"
+          className={cls.input}
         />
 
         <button
           onClick={loadLedger}
           disabled={!account || loading}
-          className="bg-[#0875e1] hover:bg-[#0667c8] text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors shadow-sm"
+          className={cls.btnPrimary}
         >
           {loading ? 'Loading…' : 'Load'}
         </button>
       </div>
 
-      {/* Account name subtitle */}
       {selectedAccount && (
-        <p className="text-sm text-slate-500 mb-3">
+        <p className="text-sm text-slate-500">
           Account <span className="font-mono font-medium text-slate-700">{selectedAccount.code}</span>
           {' — '}{selectedAccount.name}
         </p>
       )}
 
-      {error && (
-        <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
-          {error}
-        </div>
-      )}
+      {error && <div className={cls.alertError}>{error}</div>}
 
       {/* Table */}
       {loaded && (
@@ -157,36 +147,32 @@ export function Ledger() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Date</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-20">TRX</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Particular</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Debit</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Credit</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-32">Balance</th>
+                    <th className={`${cls.th} w-28`}>Date</th>
+                    <th className={`${cls.th} w-20`}>TRX</th>
+                    <th className={cls.th}>Particular</th>
+                    <th className={`${cls.thRight} w-28`}>Debit</th>
+                    <th className={`${cls.thRight} w-28`}>Credit</th>
+                    <th className={`${cls.thRight} w-32`}>Balance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {rows.map(row => {
                     const bal = fmtBalance(row.balance)
                     return (
-                      <tr key={row.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-2.5 text-slate-600">{row.date}</td>
-                        <td className="px-4 py-2.5">
+                      <tr key={row.id} className="hover:bg-[#0875e1]/[0.03] transition-colors">
+                        <td className={cls.td}>{row.date}</td>
+                        <td className={cls.tdMono}>
                           <button
                             onClick={() => handleTrxClick(row.trx_no)}
-                            className="font-mono text-slate-600 hover:text-slate-900 hover:underline"
+                            className="hover:text-[#0875e1] hover:underline"
                           >
                             {row.trx_no}
                           </button>
                         </td>
-                        <td className="px-4 py-2.5 text-slate-800">{row.particular}</td>
-                        <td className="px-4 py-2.5 text-right font-mono text-slate-700">
-                          {fmtAmt(row.dr_amount)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-slate-700">
-                          {fmtAmt(row.cr_amount)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-mono">
+                        <td className={cls.td}>{row.particular}</td>
+                        <td className={cls.tdRight}>{fmtAmt(row.dr_amount)}</td>
+                        <td className={cls.tdRight}>{fmtAmt(row.cr_amount)}</td>
+                        <td className="px-5 py-3.5 text-right font-mono">
                           <span className={bal.positive === null ? 'text-slate-400' : 'text-slate-800'}>
                             {bal.text}
                           </span>
@@ -202,13 +188,13 @@ export function Ledger() {
                 </tbody>
                 <tfoot className="border-t-2 border-slate-300 bg-slate-50">
                   <tr>
-                    <td colSpan={3} className="px-4 py-2.5 text-sm font-medium text-slate-600">
+                    <td colSpan={3} className="px-5 py-3 text-sm font-medium text-slate-600">
                       Totals ({rows.length} line{rows.length !== 1 ? 's' : ''})
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-slate-800">
+                    <td className="px-5 py-3 text-right font-mono font-semibold text-slate-800">
                       {totalDr.toFixed(2)}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-slate-800">
+                    <td className="px-5 py-3 text-right font-mono font-semibold text-slate-800">
                       {totalCr.toFixed(2)}
                     </td>
                     <td />
