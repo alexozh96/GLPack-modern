@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -9,7 +9,7 @@ import { importLedgerCsv, exportLedgerCsv } from '../api/ledger'
 import type { JournalSummary } from '../api/journal'
 import type { Account } from '../api/accounts'
 import type { Phrase } from '../api/phrases'
-import { PageHeader, cls } from '../components/ui'
+import { PageHeader, cls, SortHeader, useSortState } from '../components/ui'
 
 interface ImportPreview {
   file: File
@@ -111,6 +111,7 @@ export function Journal() {
   const [listError, setListError] = useState<string | null>(null)
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const { sortKey, sortDir, handleSort } = useSortState()
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
 
@@ -139,6 +140,19 @@ export function Journal() {
   const totalCr = round2(rows.reduce((s, r) => s + (parseFloat(r.cr) || 0), 0))
   const balanced = totalDr > 0 && totalDr === totalCr
   const diff = round2(Math.abs(totalDr - totalCr))
+
+  const sortedEntries = useMemo(() => {
+    if (!sortKey) return entries
+    return [...entries].sort((a, b) => {
+      let cmp = 0
+      if (sortKey === 'trx_no')      cmp = a.trx_no.localeCompare(b.trx_no)
+      else if (sortKey === 'date')        cmp = a.date.localeCompare(b.date)
+      else if (sortKey === 'description') cmp = a.description.localeCompare(b.description)
+      else if (sortKey === 'total_dr')    cmp = parseFloat(a.total_dr) - parseFloat(b.total_dr)
+      else if (sortKey === 'total_cr')    cmp = parseFloat(a.total_cr) - parseFloat(b.total_cr)
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+  }, [entries, sortKey, sortDir])
 
   const accountOptions: ComboOption[] = accounts.map(a => ({ value: a.code, label: `${a.code} — ${a.name}` }))
   const phraseOptions: ComboOption[] = phrases.map(p => ({
@@ -520,16 +534,16 @@ export function Journal() {
                     />
                   </th>
                 )}
-                <th className={`${cls.th} w-24`}>TRX</th>
-                <th className={`${cls.th} w-28`}>Date</th>
-                <th className={cls.th}>Description</th>
-                <th className={`${cls.thRight} w-28`}>Debit</th>
-                <th className={`${cls.thRight} w-28`}>Credit</th>
+                <SortHeader label="TRX"         col="trx_no"      sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-24" />
+                <SortHeader label="Date"        col="date"        sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" />
+                <SortHeader label="Description" col="description" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <SortHeader label="Debit"       col="total_dr"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" right />
+                <SortHeader label="Credit"      col="total_cr"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" right />
                 {canWrite && <th className="w-36" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {entries.map(entry => (
+              {sortedEntries.map(entry => (
                 <tr
                   key={entry.trx_no}
                   className={`transition-colors ${selected.has(entry.trx_no) ? 'bg-[#0875e1]/[0.04]' : 'hover:bg-[#0875e1]/[0.03]'}`}

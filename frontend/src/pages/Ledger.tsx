@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getLedger } from '../api/ledger'
 import { downloadLedgerPdf } from '../api/reports'
 import { listAccounts } from '../api/accounts'
 import type { LedgerLine } from '../api/ledger'
 import type { Account } from '../api/accounts'
-import { PageHeader, cls } from '../components/ui'
+import { PageHeader, cls, SortHeader, useSortState } from '../components/ui'
 
 function fmtAmt(v: string | number): string {
   const n = parseFloat(String(v))
@@ -36,6 +36,7 @@ export function Ledger() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pdfBusy, setPdfBusy] = useState(false)
+  const { sortKey, sortDir, handleSort } = useSortState()
 
   useEffect(() => {
     listAccounts().then(setAccounts).catch(() => {})
@@ -90,6 +91,20 @@ export function Ledger() {
     setLoaded(false)
   }
 
+  const sortedRows = useMemo(() => {
+    if (!sortKey) return rows
+    return [...rows].sort((a, b) => {
+      let cmp = 0
+      if (sortKey === 'date')       cmp = a.date.localeCompare(b.date)
+      else if (sortKey === 'trx_no')     cmp = a.trx_no.localeCompare(b.trx_no)
+      else if (sortKey === 'particular') cmp = a.particular.localeCompare(b.particular)
+      else if (sortKey === 'dr_amount')  cmp = parseFloat(a.dr_amount) - parseFloat(b.dr_amount)
+      else if (sortKey === 'cr_amount')  cmp = parseFloat(a.cr_amount) - parseFloat(b.cr_amount)
+      else if (sortKey === 'balance')    cmp = parseFloat(a.balance)   - parseFloat(b.balance)
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+  }, [rows, sortKey, sortDir])
+
   const selectedAccount = accounts.find(a => a.code === account)
   const canPdf = !!account && !!fromDate && !!toDate
 
@@ -121,8 +136,24 @@ export function Ledger() {
             onFocus={() => setAccountOpen(true)}
             onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
             placeholder="Search account…"
-            className={`${cls.input} w-56`}
+            className={`${cls.input} w-56 ${accountQuery ? 'pr-8' : ''}`}
           />
+          {accountQuery && (
+            <button
+              onMouseDown={e => {
+                e.preventDefault()
+                setAccountQuery('')
+                setAccount('')
+                setLoaded(false)
+                setAccountOpen(false)
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-slate-300 text-slate-500 hover:text-slate-700 transition-colors text-[11px] leading-none"
+              tabIndex={-1}
+              aria-label="Clear"
+            >
+              ✕
+            </button>
+          )}
           {accountOpen && filteredAccounts.length > 0 && (
             <div className="absolute z-20 top-full left-0 mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto min-w-full">
               {filteredAccounts.map(a => (
@@ -183,16 +214,16 @@ export function Ledger() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className={`${cls.th} w-28`}>Date</th>
-                    <th className={`${cls.th} w-20`}>TRX</th>
-                    <th className={cls.th}>Particular</th>
-                    <th className={`${cls.thRight} w-28`}>Debit</th>
-                    <th className={`${cls.thRight} w-28`}>Credit</th>
-                    <th className={`${cls.thRight} w-32`}>Balance</th>
+                    <SortHeader label="Date"       col="date"       sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" />
+                    <SortHeader label="TRX"        col="trx_no"     sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-20" />
+                    <SortHeader label="Particular" col="particular" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                    <SortHeader label="Debit"      col="dr_amount"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" right />
+                    <SortHeader label="Credit"     col="cr_amount"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-28" right />
+                    <SortHeader label="Balance"    col="balance"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-32" right />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rows.map(row => {
+                  {sortedRows.map(row => {
                     const bal = fmtBalance(row.balance)
                     return (
                       <tr key={row.id} className="hover:bg-[#0875e1]/[0.03] transition-colors">

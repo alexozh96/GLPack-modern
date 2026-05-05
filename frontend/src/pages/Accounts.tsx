@@ -6,7 +6,7 @@ import {
   importAccountsCsv, exportAccountsCsv, bulkDeleteAccounts,
 } from '../api/accounts'
 import type { Account } from '../api/accounts'
-import { PageHeader, cls } from '../components/ui'
+import { PageHeader, cls, SortHeader, useSortState } from '../components/ui'
 
 const PREFIX_OPTIONS = [
   { value: '', label: 'All categories' },
@@ -53,6 +53,7 @@ export function Accounts() {
 
   const [search, setSearch] = useState('')
   const [prefix, setPrefix] = useState('')
+  const { sortKey, sortDir, handleSort } = useSortState()
 
   const [modal, setModal] = useState<ModalState | null>(null)
   const [formCode, setFormCode] = useState('')
@@ -91,12 +92,21 @@ export function Accounts() {
   const filtered = useMemo(() => {
     const s = search.toLowerCase()
     const p = prefix.toUpperCase()
-    return accounts.filter(a => {
+    let result = accounts.filter(a => {
       const matchSearch = !s || a.code.toLowerCase().includes(s) || a.name.toLowerCase().includes(s)
       const matchPrefix = !p || a.code.startsWith(p)
       return matchSearch && matchPrefix
     })
-  }, [accounts, search, prefix])
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        const av = sortKey === 'code' ? a.code : a.name
+        const bv = sortKey === 'code' ? b.code : b.name
+        const cmp = av.localeCompare(bv)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    return result
+  }, [accounts, search, prefix, sortKey, sortDir])
 
   const allSelected = filtered.length > 0 && filtered.every(a => selected.has(a.code))
 
@@ -310,8 +320,8 @@ export function Accounts() {
                     />
                   </th>
                 )}
-                <th className={`${cls.th} w-24`}>Code</th>
-                <th className={cls.th}>Name</th>
+                <SortHeader label="Code" col="code" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="w-24" />
+                <SortHeader label="Name" col="name" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 {isAdmin && <th className="w-36" />}
               </tr>
             </thead>
