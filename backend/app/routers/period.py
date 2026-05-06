@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import AdminAccess, get_current_user
+from app.auth import CompanyAdmin
 from app.database import get_db
 from app.services.period_close import close_period
 
-router = APIRouter(prefix="/period", tags=["period"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/period", tags=["period"])
 
 
 class PeriodCloseIn(BaseModel):
@@ -23,5 +23,6 @@ class PeriodCloseResult(BaseModel):
 
 
 @router.post("/close", response_model=PeriodCloseResult)
-def close_period_endpoint(body: PeriodCloseIn, _: AdminAccess, db: Session = Depends(get_db)):
-    return close_period(db, body.period_end)
+def close_period_endpoint(body: PeriodCloseIn, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
+    return close_period(db, company_id, body.period_end)

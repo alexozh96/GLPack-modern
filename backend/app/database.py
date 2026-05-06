@@ -1,16 +1,12 @@
-from pathlib import Path
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-# Always resolve to backend/glpack.db regardless of working directory
-_DB_PATH = Path(__file__).resolve().parent.parent / "glpack.db"
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{_DB_PATH}"
+DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./glpack.db")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-)
+_connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
+engine = create_engine(DATABASE_URL, connect_args=_connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

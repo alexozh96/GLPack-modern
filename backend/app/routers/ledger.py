@@ -1,5 +1,6 @@
 import csv
 import io
+from collections import defaultdict
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
@@ -7,14 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFi
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import WriteAccess, get_current_user
+from app.auth import CompanyUser, CompanyWrite
 from app.database import get_db
 from app.models.account import Account
+from app.models.company import Company
 from app.models.ledger import LedgerEntry
-from app.models.setup import Setup
 from app.schemas.ledger import LedgerLineWithBalance
 
-router = APIRouter(prefix="/ledger", tags=["ledger"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/ledger", tags=["ledger"])
 
 _TWO = Decimal("0.01")
 
@@ -33,13 +34,15 @@ def _parse_dec(s: str) -> Decimal:
 
 @router.get("", response_model=list[LedgerLineWithBalance])
 def list_ledger(
+    ctx: CompanyUser,
     account: str | None = Query(None),
     from_date: date | None = Query(None),
     to_date: date | None = Query(None),
     trx_no: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    q = db.query(LedgerEntry)
+    _, company_id, _ = ctx
+    q = db.query(LedgerEntry).filter(LedgerEntry.company_id == company_id)
     if account:
         q = q.filter(LedgerEntry.account == account.strip().upper())
     if from_date:
@@ -71,12 +74,14 @@ def list_ledger(
 
 @router.get("/export-csv")
 def export_ledger_csv(
+    ctx: CompanyUser,
     account: str | None = Query(None),
     from_date: date | None = Query(None),
     to_date: date | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    q = db.query(LedgerEntry)
+    _, company_id, _ = ctx
+    q = db.query(LedgerEntry).filter(LedgerEntry.company_id == company_id)
     if account:
         q = q.filter(LedgerEntry.account == account.strip().upper())
     if from_date:
@@ -109,7 +114,8 @@ def export_ledger_csv(
 
 
 @router.post("/import-csv", response_model=CsvImportResult)
-async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get_db)):
+async def import_csv(file: UploadFile, ctx: CompanyWrite, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     content = await file.read()
     try:
         text = content.decode("utf-8-sig")
@@ -126,7 +132,6 @@ async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get
     if missing:
         raise HTTPException(400, f"CSV missing column(s): {', '.join(sorted(missing))}")
 
-    # ── Parse all rows first ──────────────────────────────────────────────────
     errors: list[str] = []
     parsed: list[dict] = []
     for i, raw in enumerate(reader, start=2):
@@ -153,8 +158,6 @@ async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get
     if errors:
         raise HTTPException(422, detail=errors)
 
-    # ── Validate trx_no balance ───────────────────────────────────────────────
-    from collections import defaultdict
     groups: dict[str, list[dict]] = defaultdict(list)
     for row in parsed:
         groups[row["trx_no"]].append(row)
@@ -168,17 +171,20 @@ async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get
     if errors:
         raise HTTPException(422, detail=errors)
 
-    # ── Validate accounts exist ───────────────────────────────────────────────
     codes = {r["account"] for r in parsed}
     for code in sorted(codes):
-        if not db.get(Account, code):
+        if not db.get(Account, (company_id, code)):
             errors.append(f"Account {code!r} not found")
 
     if errors:
         raise HTTPException(422, detail=errors)
 
-    # ── Check trx_no conflicts with existing DB entries ───────────────────────
-    existing_trx = {row[0] for row in db.query(LedgerEntry.trx_no).distinct()}
+    existing_trx = {
+        row[0]
+        for row in db.query(LedgerEntry.trx_no)
+        .filter(LedgerEntry.company_id == company_id)
+        .distinct()
+    }
     for trx_no in groups:
         if trx_no in existing_trx:
             errors.append(f"trx_no {trx_no!r} already exists in the database")
@@ -186,11 +192,10 @@ async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get
     if errors:
         raise HTTPException(422, detail=errors)
 
-    # ── Check period lock ─────────────────────────────────────────────────────
-    lock_row = db.get(Setup, "locked_before")
-    if lock_row and lock_row.value:
+    company = db.get(Company, company_id)
+    if company and company.locked_before:
         try:
-            locked = date.fromisoformat(lock_row.value)
+            locked = date.fromisoformat(company.locked_before)
             for row in parsed:
                 if row["date"] <= locked:
                     errors.append(
@@ -203,9 +208,9 @@ async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get
     if errors:
         raise HTTPException(422, detail=errors)
 
-    # ── Insert ────────────────────────────────────────────────────────────────
     entries = [
         LedgerEntry(
+            company_id=company_id,
             date=row["date"], trx_no=row["trx_no"], account=row["account"],
             particular=row["particular"], dr_amount=row["dr_amount"], cr_amount=row["cr_amount"],
         )

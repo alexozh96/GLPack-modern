@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-export const api = axios.create({ baseURL: 'http://localhost:8000' })
+export const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+})
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
@@ -22,6 +24,7 @@ api.interceptors.response.use(
       !error.config?.url?.includes('/auth/login')
     ) {
       localStorage.removeItem('token')
+      localStorage.removeItem('companyInfo')
       _logoutHandler?.()
     }
     return Promise.reject(error)
@@ -41,8 +44,8 @@ export interface TokenResponse {
 export interface UserRead {
   id: number
   username: string
-  full_name: string | null
   access_level: number
+  is_system_admin: boolean
   is_active: boolean
 }
 
@@ -58,4 +61,21 @@ export async function me(): Promise<UserRead> {
 
 export async function logout(): Promise<void> {
   await api.post('/auth/logout')
+}
+
+export interface CompanyInfo {
+  id: number
+  name: string
+  currency: string
+  access_level: number
+}
+
+export async function getCompanies(): Promise<CompanyInfo[]> {
+  const res = await api.get<CompanyInfo[]>('/auth/companies')
+  return res.data
+}
+
+export async function selectCompany(companyId: number): Promise<TokenResponse> {
+  const res = await api.post<TokenResponse>('/auth/select-company', { company_id: companyId })
+  return res.data
 }

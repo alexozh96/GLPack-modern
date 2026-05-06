@@ -2,27 +2,32 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import CompanyUser
 from app.database import get_db
 from app.models.account import Account
 from app.models.ledger import LedgerEntry
 from app.models.phrase import Phrase
 from app.schemas.search import AccountResult, JournalResult, PhraseResult, SearchResult
 
-router = APIRouter(prefix="/search", tags=["search"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/search", tags=["search"])
 
 
 @router.get("", response_model=SearchResult)
 def search(
+    ctx: CompanyUser,
     q: str = Query(..., min_length=2, max_length=100),
     limit: int = Query(8, le=20),
     db: Session = Depends(get_db),
 ):
+    _, company_id, _ = ctx
     pattern = f"%{q}%"
 
     accounts = (
         db.query(Account)
-        .filter(or_(Account.code.ilike(pattern), Account.name.ilike(pattern)))
+        .filter(
+            Account.company_id == company_id,
+            or_(Account.code.ilike(pattern), Account.name.ilike(pattern)),
+        )
         .order_by(Account.code)
         .limit(limit)
         .all()
@@ -30,7 +35,7 @@ def search(
 
     phrases = (
         db.query(Phrase)
-        .filter(Phrase.phrase.ilike(pattern))
+        .filter(Phrase.company_id == company_id, Phrase.phrase.ilike(pattern))
         .order_by(Phrase.phrase)
         .limit(limit)
         .all()
@@ -42,7 +47,7 @@ def search(
             LedgerEntry.date,
             func.min(LedgerEntry.particular).label("description"),
         )
-        .filter(LedgerEntry.particular.ilike(pattern))
+        .filter(LedgerEntry.company_id == company_id, LedgerEntry.particular.ilike(pattern))
         .group_by(LedgerEntry.trx_no, LedgerEntry.date)
         .order_by(LedgerEntry.date.desc(), LedgerEntry.trx_no)
         .limit(limit)

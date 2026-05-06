@@ -43,22 +43,51 @@ if exist "%VENV%\Scripts\activate.bat" (
     echo [OK]   Virtual environment created.
 )
 
-REM ── Backend: install packages ─────────────────────────────────
+REM ── Backend: install Python packages ─────────────────────────
 echo [....] Installing Python packages...
 call "%VENV%\Scripts\activate.bat"
 pip install -r "%REQUIREMENTS%" --quiet
 if errorlevel 1 ( echo [ERROR] pip install failed. & pause & exit /b 1 )
 echo [OK]   Python packages installed.
 
+echo.
+
 REM ── Backend: create .env if missing ──────────────────────────
 if exist "%ENV_FILE%" (
-    echo [SKIP] .env already exists.
+    echo [SKIP] backend\.env already exists.
 ) else (
     copy "%ENV_EXAMPLE%" "%ENV_FILE%" >nul
     echo [OK]   Created backend\.env from .env.example.
     echo.
-    echo   ** Open backend\.env and set GLPACK_DATA_DIR if you are
-    echo      importing legacy data. Otherwise leave it as-is.
+    echo   ** For local development the defaults work as-is (SQLite).
+    echo   ** For production: set DATABASE_URL, SECRET_KEY, and
+    echo      ALLOWED_ORIGINS in backend\.env before deploying.
+)
+
+echo.
+
+REM ── Backend: run database migrations ─────────────────────────
+echo [....] Running database migrations...
+cd /d "%BACKEND%"
+alembic upgrade head
+if errorlevel 1 (
+    echo [ERROR] Migration failed. Check the output above.
+    pause & exit /b 1
+)
+echo [OK]   Database schema is up to date.
+
+echo.
+
+REM ── Backend: seed admin account ──────────────────────────────
+echo  Create the default admin account?
+echo  (username: admin  /  password: admin123)
+echo  Answer N if you have already set up accounts before.
+echo.
+set /p SEED_CONFIRM=  Create admin account? (y/N):
+if /i "%SEED_CONFIRM%"=="y" (
+    echo [....] Creating admin account...
+    python -c "import sys; sys.path.insert(0,'.'); from app.database import SessionLocal; from seed.seed_users import seed_users; s=SessionLocal(); n=seed_users(s); s.commit(); s.close(); print('[OK]   Admin account created.' if n else '[SKIP] Admin account already exists.')"
+    if errorlevel 1 ( echo [WARN] Seed step failed — account may already exist. )
 )
 
 echo.
@@ -75,12 +104,15 @@ echo ============================================================
 echo  Setup complete!
 echo ============================================================
 echo.
-echo  To run the app:   double-click start.bat
+echo  Next steps:
+echo    1. Double-click start.bat to launch the app
+echo    2. Log in at http://localhost:5173  (admin / admin123)
+echo    3. Go to Admin to create companies and assign users
 echo.
-echo  To import legacy data (optional, one-time only):
+echo  To import legacy DBF data (optional, one-time):
 echo    1. Set GLPACK_DATA_DIR in backend\.env to your DBF folder
 echo    2. Open a terminal in backend\
 echo    3. Run: .venv\Scripts\activate
-echo    4. Run: python seed/run_all.py
+echo    4. Run: python seed\run_all.py
 echo.
 pause

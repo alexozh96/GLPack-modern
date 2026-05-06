@@ -9,8 +9,8 @@ set VENV=%~dp0backend\.venv\Scripts\activate.bat
 echo Starting GLPack Modern...
 echo.
 
-REM ── Backend ──────────────────────────────────────────────────────────────────
-start "GLPack — Backend" cmd /k "call "%VENV%" && cd /d "%BACKEND%" && uvicorn app.main:app --reload"
+REM ── Backend: apply any pending migrations, then start server ─────────────────
+start "GLPack — Backend" cmd /k "call "%VENV%" && cd /d "%BACKEND%" && alembic upgrade head && uvicorn app.main:app --reload"
 
 REM ── Frontend ─────────────────────────────────────────────────────────────────
 start "GLPack — Frontend" cmd /k "cd /d "%FRONTEND%" && npm run dev"

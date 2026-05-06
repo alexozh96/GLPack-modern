@@ -6,7 +6,7 @@ from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.auth import WriteAccess, get_current_user
+from app.auth import CompanyUser, CompanyWrite
 from app.database import get_db
 from app.models.ledger import LedgerEntry
 from app.models.reconciliation import BankRow
@@ -19,11 +19,7 @@ from app.schemas.reconciliation import (
     ReconcSummary,
 )
 
-router = APIRouter(
-    prefix="/reconciliation",
-    tags=["reconciliation"],
-    dependencies=[Depends(get_current_user)],
-)
+router = APIRouter(prefix="/reconciliation", tags=["reconciliation"])
 
 _TWO = Decimal("0.01")
 
@@ -48,7 +44,8 @@ def _parse_amount(s: str) -> Decimal:
 
 
 @router.post("/import", response_model=ImportResult)
-async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get_db)):
+async def import_csv(file: UploadFile, ctx: CompanyWrite, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     content = await file.read()
     try:
         text = content.decode("utf-8-sig")
@@ -59,7 +56,6 @@ async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get
     if reader.fieldnames is None:
         raise HTTPException(400, "Empty or unreadable CSV")
 
-    # Normalise header names (lowercase, strip whitespace)
     norm = {k.strip().lower(): k for k in reader.fieldnames}
     required = {"date", "description", "amount"}
     missing = required - set(norm)
@@ -74,7 +70,7 @@ async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get
             amt = _parse_amount(raw[norm["amount"]])
         except ValueError as e:
             raise HTTPException(422, f"Row {i}: {e}")
-        rows.append(BankRow(date=d, description=desc, amount=amt))
+        rows.append(BankRow(company_id=company_id, date=d, description=desc, amount=amt))
 
     db.add_all(rows)
     db.commit()
@@ -82,10 +78,11 @@ async def import_csv(file: UploadFile, _: WriteAccess, db: Session = Depends(get
 
 
 @router.get("/unmatched", response_model=list[BankRowRead])
-def get_unmatched(db: Session = Depends(get_db)):
+def get_unmatched(ctx: CompanyUser, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     rows = (
         db.query(BankRow)
-        .filter(BankRow.matched_ledger_id.is_(None))
+        .filter(BankRow.company_id == company_id, BankRow.matched_ledger_id.is_(None))
         .order_by(BankRow.date, BankRow.id)
         .all()
     )
@@ -93,10 +90,12 @@ def get_unmatched(db: Session = Depends(get_db)):
 
 
 @router.get("/matched", response_model=list[MatchedPairRead])
-def get_matched(db: Session = Depends(get_db)):
+def get_matched(ctx: CompanyUser, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     pairs = (
         db.query(BankRow, LedgerEntry)
         .join(LedgerEntry, BankRow.matched_ledger_id == LedgerEntry.id)
+        .filter(BankRow.company_id == company_id)
         .order_by(BankRow.date, BankRow.id)
         .all()
     )
@@ -119,13 +118,16 @@ def get_matched(db: Session = Depends(get_db)):
 
 
 @router.get("/gl-cash", response_model=list[GlEntryRead])
-def get_gl_cash(db: Session = Depends(get_db)):
+def get_gl_cash(ctx: CompanyUser, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     matched_ids = db.query(BankRow.matched_ledger_id).filter(
-        BankRow.matched_ledger_id.isnot(None)
+        BankRow.company_id == company_id,
+        BankRow.matched_ledger_id.isnot(None),
     )
     entries = (
         db.query(LedgerEntry)
         .filter(
+            LedgerEntry.company_id == company_id,
             LedgerEntry.account.like("CB%"),
             LedgerEntry.id.notin_(matched_ids),
         )
@@ -136,18 +138,18 @@ def get_gl_cash(db: Session = Depends(get_db)):
 
 
 @router.post("/match", response_model=BankRowRead)
-def match_entry(body: MatchIn, _: WriteAccess, db: Session = Depends(get_db)):
+def match_entry(body: MatchIn, ctx: CompanyWrite, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     bank_row = db.get(BankRow, body.bank_row_id)
-    if not bank_row:
+    if not bank_row or bank_row.company_id != company_id:
         raise HTTPException(404, "Bank row not found")
     if bank_row.matched_ledger_id is not None:
         raise HTTPException(409, "Bank row already matched")
 
     gl = db.get(LedgerEntry, body.ledger_entry_id)
-    if not gl:
+    if not gl or gl.company_id != company_id:
         raise HTTPException(404, "Ledger entry not found")
 
-    # Check the GL entry isn't already claimed by another bank row
     existing = db.query(BankRow).filter(
         BankRow.matched_ledger_id == body.ledger_entry_id
     ).first()
@@ -161,16 +163,21 @@ def match_entry(body: MatchIn, _: WriteAccess, db: Session = Depends(get_db)):
 
 
 @router.delete("/match/{bank_row_id}", status_code=204)
-def unmatch_entry(bank_row_id: int, _: WriteAccess, db: Session = Depends(get_db)):
+def unmatch_entry(bank_row_id: int, ctx: CompanyWrite, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     bank_row = db.get(BankRow, bank_row_id)
-    if not bank_row:
+    if not bank_row or bank_row.company_id != company_id:
         raise HTTPException(404, "Bank row not found")
     bank_row.matched_ledger_id = None
     db.commit()
 
 
 @router.get("/summary", response_model=ReconcSummary)
-def get_summary(db: Session = Depends(get_db)):
-    total = db.query(BankRow).count()
-    matched = db.query(BankRow).filter(BankRow.matched_ledger_id.isnot(None)).count()
+def get_summary(ctx: CompanyUser, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
+    total = db.query(BankRow).filter(BankRow.company_id == company_id).count()
+    matched = db.query(BankRow).filter(
+        BankRow.company_id == company_id,
+        BankRow.matched_ledger_id.isnot(None),
+    ).count()
     return ReconcSummary(total=total, matched=matched, unmatched=total - matched)

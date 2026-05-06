@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFi
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import AdminAccess, get_current_user
+from app.auth import CompanyAdmin, CompanyUser
 from app.database import get_db
 from app.models.account import Account
 from app.models.ledger import LedgerEntry
@@ -25,16 +25,19 @@ class BulkDeleteResult(BaseModel):
     deleted: int
     skipped: list[str]
 
-router = APIRouter(prefix="/accounts", tags=["accounts"], dependencies=[Depends(get_current_user)])
+
+router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
 @router.get("", response_model=list[AccountRead])
 def list_accounts(
+    ctx: CompanyUser,
     search: str | None = Query(None),
     prefix: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    q = db.query(Account)
+    _, company_id, _ = ctx
+    q = db.query(Account).filter(Account.company_id == company_id)
     if search:
         term = f"%{search}%"
         q = q.filter(Account.name.ilike(term) | Account.code.ilike(term))
@@ -45,11 +48,13 @@ def list_accounts(
 
 @router.get("/export-csv")
 def export_accounts_csv(
+    ctx: CompanyUser,
     search: str | None = Query(None),
     prefix: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    q = db.query(Account)
+    _, company_id, _ = ctx
+    q = db.query(Account).filter(Account.company_id == company_id)
     if search:
         term = f"%{search}%"
         q = q.filter(Account.name.ilike(term) | Account.code.ilike(term))
@@ -71,18 +76,20 @@ def export_accounts_csv(
 
 
 @router.get("/{code}", response_model=AccountRead)
-def get_account(code: str, db: Session = Depends(get_db)):
-    account = db.get(Account, code.upper())
+def get_account(code: str, ctx: CompanyUser, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
+    account = db.get(Account, (company_id, code.upper()))
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     return account
 
 
 @router.post("", response_model=AccountRead, status_code=201)
-def create_account(body: AccountCreate, _: AdminAccess, db: Session = Depends(get_db)):
-    if db.get(Account, body.code):
+def create_account(body: AccountCreate, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
+    if db.get(Account, (company_id, body.code)):
         raise HTTPException(status_code=409, detail="Account code already exists")
-    account = Account(code=body.code, name=body.name)
+    account = Account(company_id=company_id, code=body.code, name=body.name)
     db.add(account)
     db.commit()
     db.refresh(account)
@@ -90,8 +97,9 @@ def create_account(body: AccountCreate, _: AdminAccess, db: Session = Depends(ge
 
 
 @router.put("/{code}", response_model=AccountRead)
-def update_account(code: str, body: AccountUpdate, _: AdminAccess, db: Session = Depends(get_db)):
-    account = db.get(Account, code.upper())
+def update_account(code: str, body: AccountUpdate, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
+    account = db.get(Account, (company_id, code.upper()))
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     account.name = body.name
@@ -101,15 +109,20 @@ def update_account(code: str, body: AccountUpdate, _: AdminAccess, db: Session =
 
 
 @router.delete("/bulk", response_model=BulkDeleteResult)
-def bulk_delete_accounts(body: BulkDeleteIn, _: AdminAccess, db: Session = Depends(get_db)):
+def bulk_delete_accounts(body: BulkDeleteIn, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     deleted = 0
     skipped: list[str] = []
     for code in body.codes:
-        account = db.get(Account, code.upper())
+        account = db.get(Account, (company_id, code.upper()))
         if not account:
             skipped.append(code)
             continue
-        has_entries = db.query(LedgerEntry).filter(LedgerEntry.account == code.upper()).first()
+        has_entries = (
+            db.query(LedgerEntry)
+            .filter(LedgerEntry.company_id == company_id, LedgerEntry.account == code.upper())
+            .first()
+        )
         if has_entries:
             skipped.append(code)
             continue
@@ -120,8 +133,9 @@ def bulk_delete_accounts(body: BulkDeleteIn, _: AdminAccess, db: Session = Depen
 
 
 @router.delete("/{code}", status_code=204)
-def delete_account(code: str, _: AdminAccess, db: Session = Depends(get_db)):
-    account = db.get(Account, code.upper())
+def delete_account(code: str, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
+    account = db.get(Account, (company_id, code.upper()))
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     db.delete(account)
@@ -129,7 +143,8 @@ def delete_account(code: str, _: AdminAccess, db: Session = Depends(get_db)):
 
 
 @router.post("/import-csv", response_model=AccountImportResult)
-async def import_accounts_csv(file: UploadFile, _: AdminAccess, db: Session = Depends(get_db)):
+async def import_accounts_csv(file: UploadFile, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
     content = await file.read()
     try:
         text = content.decode("utf-8-sig")
@@ -152,10 +167,10 @@ async def import_accounts_csv(file: UploadFile, _: AdminAccess, db: Session = De
         if not code or not name:
             skipped += 1
             continue
-        if db.get(Account, code):
+        if db.get(Account, (company_id, code)):
             skipped += 1
             continue
-        db.add(Account(code=code, name=name))
+        db.add(Account(company_id=company_id, code=code, name=name))
         imported += 1
 
     db.commit()

@@ -19,7 +19,7 @@ Account prefix conventions (from documentation Section 4):
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.models.account import Account
@@ -41,6 +41,7 @@ def _pct(part: Decimal, whole: Decimal) -> Decimal | None:
 
 def _totals_by_prefix(
     db: Session,
+    company_id: int,
     period_start: date,
     period_end: date,
     *prefixes: str,
@@ -57,13 +58,19 @@ def _totals_by_prefix(
             func.sum(LedgerEntry.dr_amount).label("sum_dr"),
             func.sum(LedgerEntry.cr_amount).label("sum_cr"),
         )
-        .join(Account, Account.code == LedgerEntry.account)
-        .filter(LedgerEntry.date >= period_start, LedgerEntry.date <= period_end)
+        .join(
+            Account,
+            (Account.company_id == LedgerEntry.company_id) & (Account.code == LedgerEntry.account),
+        )
+        .filter(
+            LedgerEntry.company_id == company_id,
+            LedgerEntry.date >= period_start,
+            LedgerEntry.date <= period_end,
+        )
     )
     if exact_codes is not None:
         q = q.filter(LedgerEntry.account.in_(exact_codes))
     elif prefixes:
-        from sqlalchemy import or_
         q = q.filter(or_(*(LedgerEntry.account.like(f"{p}%") for p in prefixes)))
 
     rows = q.group_by(LedgerEntry.account, Account.name).order_by(LedgerEntry.account).all()
@@ -80,17 +87,15 @@ def _totals_by_prefix(
 
 def _cumulative_net(
     db: Session,
+    company_id: int,
     up_to: date,
     *prefixes: str,
     credit_normal: bool = True,
 ) -> Decimal:
     """Sum net balance of all matching accounts from the beginning up to (inclusive) up_to."""
-    from sqlalchemy import or_
     q = (
-        db.query(
-            func.sum(LedgerEntry.cr_amount - LedgerEntry.dr_amount)
-        )
-        .filter(LedgerEntry.date <= up_to)
+        db.query(func.sum(LedgerEntry.cr_amount - LedgerEntry.dr_amount))
+        .filter(LedgerEntry.company_id == company_id, LedgerEntry.date <= up_to)
     )
     if prefixes:
         q = q.filter(or_(*(LedgerEntry.account.like(f"{p}%") for p in prefixes)))
@@ -99,10 +104,49 @@ def _cumulative_net(
     return net if credit_normal else -net
 
 
+def _cum_rows_codes(
+    db: Session,
+    company_id: int,
+    up_to: date,
+    codes: list[str],
+    debit_normal: bool,
+) -> list[dict]:
+    if not codes:
+        return []
+    q = (
+        db.query(
+            LedgerEntry.account,
+            Account.name,
+            func.sum(LedgerEntry.dr_amount).label("sum_dr"),
+            func.sum(LedgerEntry.cr_amount).label("sum_cr"),
+        )
+        .join(
+            Account,
+            (Account.company_id == LedgerEntry.company_id) & (Account.code == LedgerEntry.account),
+        )
+        .filter(
+            LedgerEntry.company_id == company_id,
+            LedgerEntry.date <= up_to,
+            LedgerEntry.account.in_(codes),
+        )
+        .group_by(LedgerEntry.account, Account.name)
+        .order_by(LedgerEntry.account)
+        .all()
+    )
+    return [
+        {
+            "code": r.account,
+            "name": r.name,
+            "amount": _q(r.sum_dr - r.sum_cr) if debit_normal else _q(r.sum_cr - r.sum_dr),
+        }
+        for r in q
+    ]
+
+
 # ── Trial Balance ─────────────────────────────────────────────────────────────
 
-def get_trial_balance(db: Session, period_start: date, period_end: date) -> dict:
-    rows = _totals_by_prefix(db, period_start, period_end)
+def get_trial_balance(db: Session, company_id: int, period_start: date, period_end: date) -> dict:
+    rows = _totals_by_prefix(db, company_id, period_start, period_end)
     accounts = [
         {
             "code": r["code"],
@@ -126,40 +170,31 @@ def get_trial_balance(db: Session, period_start: date, period_end: date) -> dict
 
 # ── Profit & Loss ─────────────────────────────────────────────────────────────
 
-def get_profit_loss(db: Session, period_start: date, period_end: date) -> dict:
-    # Revenue: SA* — net = cr - dr (positive = revenue earned)
-    rev_rows = _totals_by_prefix(db, period_start, period_end, "SA")
+def get_profit_loss(db: Session, company_id: int, period_start: date, period_end: date) -> dict:
+    rev_rows = _totals_by_prefix(db, company_id, period_start, period_end, "SA")
     total_revenue = sum((_q(r["sum_cr"] - r["sum_dr"]) for r in rev_rows), _ZERO)
 
-    # Cost of sales: CO* — net = dr - cr
-    cos_rows = _totals_by_prefix(db, period_start, period_end, "CO")
+    cos_rows = _totals_by_prefix(db, company_id, period_start, period_end, "CO")
     total_cos = sum((_q(r["sum_dr"] - r["sum_cr"]) for r in cos_rows), _ZERO)
 
     gross_profit = total_revenue - total_cos
 
-    # Other income: OI* — net = cr - dr
-    oi_rows = _totals_by_prefix(db, period_start, period_end, "OI")
+    oi_rows = _totals_by_prefix(db, company_id, period_start, period_end, "OI")
     other_income = sum((_q(r["sum_cr"] - r["sum_dr"]) for r in oi_rows), _ZERO)
 
     total_gross_revenue = gross_profit + other_income
 
-    # Expenses: EX* — net = dr - cr
-    exp_rows = _totals_by_prefix(db, period_start, period_end, "EX")
+    exp_rows = _totals_by_prefix(db, company_id, period_start, period_end, "EX")
     total_expenses = sum((_q(r["sum_dr"] - r["sum_cr"]) for r in exp_rows), _ZERO)
 
     profit_before_tax = total_gross_revenue - total_expenses
 
-    # Taxation: TX* — net = dr - cr
-    tx_rows = _totals_by_prefix(db, period_start, period_end, "TX")
+    tx_rows = _totals_by_prefix(db, company_id, period_start, period_end, "TX")
     taxation = sum((_q(r["sum_dr"] - r["sum_cr"]) for r in tx_rows), _ZERO)
 
     profit_after_tax = profit_before_tax - taxation
 
-    # P&L brought forward: cumulative PL* balance up to (and including) period_start.
-    # Opening-balance entries ("BALANCE BROUGHT DOWN") are conventionally posted on the
-    # first day of the new period, so we include period_start to capture them.
-    pl_bf = _cumulative_net(db, period_start, "PL", credit_normal=True)
-
+    pl_bf = _cumulative_net(db, company_id, period_start, "PL", credit_normal=True)
     pl_cf = pl_bf + profit_after_tax
 
     def _rev_lines(rows):
@@ -206,12 +241,11 @@ def get_profit_loss(db: Session, period_start: date, period_end: date) -> dict:
 
 # ── Balance Sheet ─────────────────────────────────────────────────────────────
 
-def get_balance_sheet(db: Session, period_start: date, period_end: date) -> dict:
+def get_balance_sheet(db: Session, company_id: int, period_start: date, period_end: date) -> dict:
     """Balance sheet is a snapshot at period_end — uses cumulative balances from all time."""
     period_end_date = period_end
 
     def _cum_rows(*prefixes, credit_normal=True):
-        from sqlalchemy import or_
         q = (
             db.query(
                 LedgerEntry.account,
@@ -219,8 +253,14 @@ def get_balance_sheet(db: Session, period_start: date, period_end: date) -> dict
                 func.sum(LedgerEntry.dr_amount).label("sum_dr"),
                 func.sum(LedgerEntry.cr_amount).label("sum_cr"),
             )
-            .join(Account, Account.code == LedgerEntry.account)
-            .filter(LedgerEntry.date <= period_end_date)
+            .join(
+                Account,
+                (Account.company_id == LedgerEntry.company_id) & (Account.code == LedgerEntry.account),
+            )
+            .filter(
+                LedgerEntry.company_id == company_id,
+                LedgerEntry.date <= period_end_date,
+            )
             .filter(or_(*(LedgerEntry.account.like(f"{p}%") for p in prefixes)))
             .group_by(LedgerEntry.account, Account.name)
             .order_by(LedgerEntry.account)
@@ -235,35 +275,27 @@ def get_balance_sheet(db: Session, period_start: date, period_end: date) -> dict
             for r in q
         ]
 
-    # Equity
     sc_rows = _cum_rows("SC", credit_normal=True)
     share_capital = sum((r["amount"] for r in sc_rows), _ZERO)
 
     pl_rows = _cum_rows("PL", credit_normal=True)
     pl_account = sum((r["amount"] for r in pl_rows), _ZERO)
 
-    # Balance sheet P&L = cumulative PL* balance (prior + opening entries) +
-    # current-period net profit from operating accounts (SA/EX/CO/etc.) that has
-    # not yet been closed to PL. Assumes closing entries are posted in the NEXT
-    # period, not within the current one.
-    pl_data = get_profit_loss(db, period_start, period_end)
+    pl_data = get_profit_loss(db, company_id, period_start, period_end)
     pl_account_bs = pl_account + pl_data["profit_after_tax"]
 
     total_equity = share_capital + pl_account_bs
 
-    # Current Assets: CA*, CB*, TD01
     ca_rows = _cum_rows("CA", "CB", credit_normal=False)
-    td01_rows = _cum_rows_codes(db, period_end_date, ["TD01"], debit_normal=True)
+    td01_rows = _cum_rows_codes(db, company_id, period_end_date, ["TD01"], debit_normal=True)
     current_asset_lines = ca_rows + td01_rows
     total_current_assets = sum((r["amount"] for r in current_asset_lines), _ZERO)
 
-    # Fixed Assets: FA*
     fa_rows = _cum_rows("FA", credit_normal=False)
     total_fixed_assets = sum((r["amount"] for r in fa_rows), _ZERO)
 
-    # Current Liabilities: CL*, TD02
     cl_rows = _cum_rows("CL", credit_normal=True)
-    td02_rows = _cum_rows_codes(db, period_end_date, ["TD02"], debit_normal=False)
+    td02_rows = _cum_rows_codes(db, company_id, period_end_date, ["TD02"], debit_normal=False)
     current_liability_lines = cl_rows + td02_rows
     total_current_liabilities = sum((r["amount"] for r in current_liability_lines), _ZERO)
 
@@ -286,40 +318,15 @@ def get_balance_sheet(db: Session, period_start: date, period_end: date) -> dict
     }
 
 
-def _cum_rows_codes(db: Session, up_to: date, codes: list[str], debit_normal: bool) -> list[dict]:
-    if not codes:
-        return []
-    q = (
-        db.query(
-            LedgerEntry.account,
-            Account.name,
-            func.sum(LedgerEntry.dr_amount).label("sum_dr"),
-            func.sum(LedgerEntry.cr_amount).label("sum_cr"),
-        )
-        .join(Account, Account.code == LedgerEntry.account)
-        .filter(LedgerEntry.date <= up_to, LedgerEntry.account.in_(codes))
-        .group_by(LedgerEntry.account, Account.name)
-        .order_by(LedgerEntry.account)
-        .all()
-    )
-    return [
-        {
-            "code": r.account,
-            "name": r.name,
-            "amount": _q(r.sum_dr - r.sum_cr) if debit_normal else _q(r.sum_cr - r.sum_dr),
-        }
-        for r in q
-    ]
-
-
 # ── Ledger Account ────────────────────────────────────────────────────────────
 
-def get_ledger_account(db: Session, code: str, period_start: date, period_end: date) -> dict | None:
-    acct = db.get(Account, code.upper())
+def get_ledger_account(
+    db: Session, company_id: int, code: str, period_start: date, period_end: date
+) -> dict | None:
+    acct = db.get(Account, (company_id, code.upper()))
     if not acct:
         return None
 
-    # Opening balance: cumulative net (dr - cr) for all entries before period_start
     from datetime import timedelta
     day_before = period_start - timedelta(days=1)
     pre = (
@@ -327,16 +334,23 @@ def get_ledger_account(db: Session, code: str, period_start: date, period_end: d
             func.sum(LedgerEntry.dr_amount).label("sum_dr"),
             func.sum(LedgerEntry.cr_amount).label("sum_cr"),
         )
-        .filter(LedgerEntry.account == code.upper(), LedgerEntry.date <= day_before)
+        .filter(
+            LedgerEntry.company_id == company_id,
+            LedgerEntry.account == code.upper(),
+            LedgerEntry.date <= day_before,
+        )
         .one()
     )
     opening_balance = _q(pre.sum_dr or 0) - _q(pre.sum_cr or 0)
 
-    # Period lines
     entries = (
         db.query(LedgerEntry)
-        .filter(LedgerEntry.account == code.upper())
-        .filter(LedgerEntry.date >= period_start, LedgerEntry.date <= period_end)
+        .filter(
+            LedgerEntry.company_id == company_id,
+            LedgerEntry.account == code.upper(),
+            LedgerEntry.date >= period_start,
+            LedgerEntry.date <= period_end,
+        )
         .order_by(LedgerEntry.date, LedgerEntry.id)
         .all()
     )
@@ -376,11 +390,9 @@ def get_ledger_account(db: Session, code: str, period_start: date, period_end: d
 
 # ── Expense Schedule ──────────────────────────────────────────────────────────
 
-def get_expense_schedule(db: Session, period_start: date, period_end: date) -> dict:
-    exp_rows = _totals_by_prefix(db, period_start, period_end, "EX")
-
-    # Total sales for % calculation
-    sa_rows = _totals_by_prefix(db, period_start, period_end, "SA")
+def get_expense_schedule(db: Session, company_id: int, period_start: date, period_end: date) -> dict:
+    exp_rows = _totals_by_prefix(db, company_id, period_start, period_end, "EX")
+    sa_rows = _totals_by_prefix(db, company_id, period_start, period_end, "SA")
     total_sales = sum((_q(r["sum_cr"] - r["sum_dr"]) for r in sa_rows), _ZERO)
 
     items = []
@@ -407,30 +419,23 @@ def get_expense_schedule(db: Session, period_start: date, period_end: date) -> d
 
 # ── Debtors Listing ───────────────────────────────────────────────────────────
 
-def get_debtors_listing(db: Session, period_start: date, period_end: date) -> dict:
-    rows = _cum_rows_codes(db, period_end, ["TD01"], debit_normal=True)
+def get_debtors_listing(db: Session, company_id: int, period_start: date, period_end: date) -> dict:
+    rows = _cum_rows_codes(db, company_id, period_end, ["TD01"], debit_normal=True)
     total = sum((r["amount"] for r in rows), _ZERO)
     return {"period_end": period_end, "items": rows, "total": total}
 
 
 # ── Creditors Listing ─────────────────────────────────────────────────────────
 
-def get_creditors_listing(db: Session, period_start: date, period_end: date) -> dict:
-    rows = _cum_rows_codes(db, period_end, ["TD02"], debit_normal=False)
+def get_creditors_listing(db: Session, company_id: int, period_start: date, period_end: date) -> dict:
+    rows = _cum_rows_codes(db, company_id, period_end, ["TD02"], debit_normal=False)
     total = sum((r["amount"] for r in rows), _ZERO)
     return {"period_end": period_end, "items": rows, "total": total}
 
 
 # ── Fixed Assets ──────────────────────────────────────────────────────────────
 
-def get_fixed_assets(db: Session, period_start: date, period_end: date) -> dict:
-    """
-    FA* accounts are the asset cost.
-    AD* accounts (if present) hold accumulated depreciation.
-    NBV = cost - accum_depn per account (matched by trailing digits, e.g. FA01 ↔ AD01).
-    """
-    from sqlalchemy import or_
-
+def get_fixed_assets(db: Session, company_id: int, period_start: date, period_end: date) -> dict:
     q = (
         db.query(
             LedgerEntry.account,
@@ -438,8 +443,14 @@ def get_fixed_assets(db: Session, period_start: date, period_end: date) -> dict:
             func.sum(LedgerEntry.dr_amount).label("sum_dr"),
             func.sum(LedgerEntry.cr_amount).label("sum_cr"),
         )
-        .join(Account, Account.code == LedgerEntry.account)
-        .filter(LedgerEntry.date <= period_end)
+        .join(
+            Account,
+            (Account.company_id == LedgerEntry.company_id) & (Account.code == LedgerEntry.account),
+        )
+        .filter(
+            LedgerEntry.company_id == company_id,
+            LedgerEntry.date <= period_end,
+        )
         .filter(or_(LedgerEntry.account.like("FA%"), LedgerEntry.account.like("AD%")))
         .group_by(LedgerEntry.account, Account.name)
         .order_by(LedgerEntry.account)
@@ -448,7 +459,7 @@ def get_fixed_assets(db: Session, period_start: date, period_end: date) -> dict:
 
     fa_map: dict[str, dict] = {}
     for r in q:
-        suffix = r.account[2:]  # e.g. "01"
+        suffix = r.account[2:]
         if r.account.startswith("FA"):
             fa_map.setdefault(suffix, {"code": r.account, "name": r.name, "cost": _ZERO, "accum_depn": _ZERO})
             fa_map[suffix]["cost"] = _q(r.sum_dr - r.sum_cr)

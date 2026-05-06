@@ -12,5 +12,6 @@ def seed_users(session: Session) -> int:
         username="admin",
         password_hash=hash_password("admin123"),
         access_level=6,
+        is_system_admin=True,
     ))
     return 1

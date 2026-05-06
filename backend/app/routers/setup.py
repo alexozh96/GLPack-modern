@@ -1,30 +1,50 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth import AdminAccess, get_current_user
+from app.auth import CompanyAdmin, CompanyUser
 from app.database import get_db
-from app.models.setup import Setup
+from app.models.company import Company
 from app.schemas.setup import SetupRead, SetupUpdate
 
-router = APIRouter(prefix="/setup", tags=["setup"], dependencies=[Depends(get_current_user)])
-
-_KEYS = ("company_name", "currency", "financial_year_end", "current_period", "locked_before")
+router = APIRouter(prefix="/setup", tags=["setup"])
 
 
-def _fetch(db: Session) -> SetupRead:
-    rows = db.query(Setup).filter(Setup.key.in_(_KEYS)).all()
-    data = {row.key: row.value for row in rows}
-    return SetupRead(**{k: data.get(k) for k in _KEYS})
+def _to_setup_read(company: Company) -> SetupRead:
+    return SetupRead(
+        company_name=company.name,
+        currency=company.currency,
+        financial_year_end=company.financial_year_end,
+        current_period=company.current_period,
+        locked_before=company.locked_before,
+    )
 
 
 @router.get("", response_model=SetupRead)
-def get_setup(db: Session = Depends(get_db)):
-    return _fetch(db)
+def get_setup(ctx: CompanyUser, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
+    company = db.get(Company, company_id)
+    if not company:
+        raise HTTPException(404, "Company not found")
+    return _to_setup_read(company)
 
 
 @router.put("", response_model=SetupRead)
-def update_setup(body: SetupUpdate, _: AdminAccess, db: Session = Depends(get_db)):
-    for key, value in body.model_dump(exclude_none=True).items():
-        db.merge(Setup(key=key, value=value))
+def update_setup(body: SetupUpdate, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+    _, company_id, _ = ctx
+    company = db.get(Company, company_id)
+    if not company:
+        raise HTTPException(404, "Company not found")
+    updates = body.model_dump(exclude_none=True)
+    if "company_name" in updates:
+        company.name = updates["company_name"]
+    if "currency" in updates:
+        company.currency = updates["currency"]
+    if "financial_year_end" in updates:
+        company.financial_year_end = updates["financial_year_end"]
+    if "current_period" in updates:
+        company.current_period = updates["current_period"]
+    if "locked_before" in updates:
+        company.locked_before = updates["locked_before"]
     db.commit()
-    return _fetch(db)
+    db.refresh(company)
+    return _to_setup_read(company)

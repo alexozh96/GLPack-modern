@@ -15,6 +15,8 @@ class UserRead(BaseModel):
     id: int
     username: str
     access_level: int
+    is_system_admin: bool
+    is_active: bool
 
     model_config = {"from_attributes": True}
 
@@ -37,8 +39,8 @@ class UserCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def password_valid(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("password must be at least 6 characters")
+        if len(v) < 8:
+            raise ValueError("password must be at least 8 characters")
         return v
 
     @field_validator("access_level")
@@ -53,6 +55,7 @@ class UserUpdate(BaseModel):
     username: str | None = None
     password: str | None = None
     access_level: int | None = None
+    is_active: bool | None = None
 
     @field_validator("username")
     @classmethod
@@ -68,8 +71,8 @@ class UserUpdate(BaseModel):
     @field_validator("password")
     @classmethod
     def password_valid(cls, v: str | None) -> str | None:
-        if v is not None and len(v) < 6:
-            raise ValueError("password must be at least 6 characters")
+        if v is not None and len(v) < 8:
+            raise ValueError("password must be at least 8 characters")
         return v
 
     @field_validator("access_level")

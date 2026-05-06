@@ -1,19 +1,13 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { getCompanies } from '../api/auth'
 import { cls } from '../components/ui'
 
-interface LocationState {
-  from?: { pathname: string }
-}
-
 export function Login() {
-  const { signIn } = useAuth()
+  const { signIn, selectCompany } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const state = location.state as LocationState | null
-  const from = state?.from?.pathname ?? '/dashboard'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -26,9 +20,26 @@ export function Login() {
     setLoading(true)
     try {
       await signIn(username, password)
-      navigate(from, { replace: true })
     } catch {
       setError('Invalid username or password.')
+      setLoading(false)
+      return
+    }
+    try {
+      const companies = await getCompanies()
+      if (companies.length === 0) {
+        setError('Your account has no company access. Contact your administrator.')
+        setLoading(false)
+        return
+      }
+      if (companies.length === 1) {
+        await selectCompany(companies[0])
+        navigate('/dashboard', { replace: true })
+      } else {
+        navigate('/companies', { replace: true })
+      }
+    } catch {
+      setError('Failed to load companies. Please try again.')
     } finally {
       setLoading(false)
     }

@@ -29,7 +29,7 @@ def upgrade() -> None:
     sa.Column('description', sa.String(length=255), nullable=False),
     sa.Column('amount', sa.Numeric(precision=12, scale=2), nullable=False),
     sa.Column('matched_ledger_id', sa.Integer(), nullable=True),
-    sa.Column('imported_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('imported_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['matched_ledger_id'], ['ledger.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('matched_ledger_id')

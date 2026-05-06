@@ -45,10 +45,11 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("date", sa.Date(), nullable=False),
         sa.Column("trx_no", sa.String(4), nullable=False),
-        sa.Column("account", sa.String(4), sa.ForeignKey("accounts.code"), nullable=False),
+        sa.Column("account", sa.String(4), nullable=False),
         sa.Column("particular", sa.String(45), nullable=False),
         sa.Column("dr_amount", sa.Numeric(12, 2), nullable=False, server_default="0"),
         sa.Column("cr_amount", sa.Numeric(12, 2), nullable=False, server_default="0"),
+        sa.ForeignKeyConstraint(["account"], ["accounts.code"], name="fk_ledger_account"),
     )
     op.create_index("ix_ledger_trx_no", "ledger", ["trx_no"])
     op.create_index("ix_ledger_date", "ledger", ["date"])
