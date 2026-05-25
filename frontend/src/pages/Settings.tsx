@@ -36,8 +36,8 @@ function Field({
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export function Settings() {
-  const { user } = useAuth()
-  const isAdmin = (user?.access_level ?? 0) >= 6
+  const { company } = useAuth()
+  const isAdmin = (company?.access_level ?? 0) >= 6
 
   const [setup, setSetup] = useState<SetupData | null>(null)
   const [form, setForm] = useState({ company_name: '', currency: '', financial_year_end: '', current_period: '' })
@@ -52,7 +52,7 @@ export function Settings() {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   // phrases
-  const canWrite = (user?.access_level ?? 0) >= 3
+  const canWrite = (company?.access_level ?? 0) >= 3
   const [phrases, setPhrases] = useState<Phrase[]>([])
   const [phraseSearch, setPhraseSearch] = useState('')
   const [newPhrase, setNewPhrase] = useState('')

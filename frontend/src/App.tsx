@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import { SetupProvider } from './context/SetupContext'
-import { ProtectedRoute, CompanyRequired } from './components/ProtectedRoute'
+import { ProtectedRoute, CompanyRequired, SystemAdminRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
 import { CompanySelect } from './pages/CompanySelect'
@@ -49,7 +49,7 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="bank-reconciliation" element={<BankReconciliation />} />
               <Route path="settings" element={<Settings />} />
-              <Route path="admin" element={<Admin />} />
+              <Route path="admin" element={<SystemAdminRoute><Admin /></SystemAdminRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

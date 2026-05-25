@@ -1,7 +1,10 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from app.auth import CurrentUser, SystemAdmin
+from app.auth import ALGORITHM, SECRET_KEY, CurrentUser, SystemAdmin, oauth2_scheme
 from app.database import get_db
 from app.models.company import Company
 from app.models.user import User
@@ -16,6 +19,29 @@ from app.schemas.company import (
 )
 
 router = APIRouter(prefix="/companies", tags=["companies"])
+
+
+def _require_company_admin_or_sysadmin(
+    company_id: int,
+    user: User,
+    token: str,
+    db: Session,
+) -> None:
+    """Allow system admin (user-level token) OR company admin (access_level=6 in company-scoped token)."""
+    if user.is_system_admin:
+        return
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        raise HTTPException(401, "Not authenticated")
+    token_company_id: int | None = payload.get("company_id")
+    if token_company_id != company_id:
+        raise HTTPException(403, "Token not scoped to this company")
+    access = db.query(UserCompanyAccess).filter_by(
+        user_id=user.id, company_id=company_id
+    ).first()
+    if not access or access.access_level < 6:
+        raise HTTPException(403, "Company admin access required")
 
 
 @router.get("", response_model=list[CompanyRead])
@@ -81,7 +107,13 @@ def deactivate_company(company_id: int, _: SystemAdmin, db: Session = Depends(ge
 
 
 @router.get("/{company_id}/users", response_model=list[UserCompanyAccessRead])
-def list_company_users(company_id: int, _: SystemAdmin, db: Session = Depends(get_db)):
+def list_company_users(
+    company_id: int,
+    user: CurrentUser,
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+):
+    _require_company_admin_or_sysadmin(company_id, user, token, db)
     if not db.get(Company, company_id):
         raise HTTPException(404, "Company not found")
     rows = (
@@ -101,7 +133,14 @@ def list_company_users(company_id: int, _: SystemAdmin, db: Session = Depends(ge
 
 
 @router.post("/{company_id}/users", status_code=201)
-def assign_user(company_id: int, body: AssignUserBody, _: SystemAdmin, db: Session = Depends(get_db)):
+def assign_user(
+    company_id: int,
+    body: AssignUserBody,
+    user: CurrentUser,
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+):
+    _require_company_admin_or_sysadmin(company_id, user, token, db)
     if not db.get(Company, company_id):
         raise HTTPException(404, "Company not found")
     if not db.get(User, body.user_id):
@@ -126,9 +165,11 @@ def update_user_access(
     company_id: int,
     user_id: int,
     body: UpdateAccessBody,
-    _: SystemAdmin,
+    user: CurrentUser,
+    token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
+    _require_company_admin_or_sysadmin(company_id, user, token, db)
     access = db.query(UserCompanyAccess).filter_by(
         user_id=user_id, company_id=company_id
     ).first()
@@ -143,9 +184,11 @@ def update_user_access(
 def remove_user_access(
     company_id: int,
     user_id: int,
-    _: SystemAdmin,
+    user: CurrentUser,
+    token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
+    _require_company_admin_or_sysadmin(company_id, user, token, db)
     access = db.query(UserCompanyAccess).filter_by(
         user_id=user_id, company_id=company_id
     ).first()

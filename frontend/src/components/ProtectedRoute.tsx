@@ -28,3 +28,13 @@ export function CompanyRequired({ children }: { children: ReactNode }) {
   if (!company) return <Navigate to="/companies" replace />
   return <>{children}</>
 }
+
+export function SystemAdminRoute({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth()
+  const location = useLocation()
+
+  if (loading) return <LoadingScreen />
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+  if (!user.is_system_admin) return <Navigate to="/dashboard" replace />
+  return <>{children}</>
+}

@@ -59,6 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   async function signIn(username: string, password: string) {
+    localStorage.removeItem('companyInfo')
+    setCompany(null)
     const { access_token } = await apiLogin({ username, password })
     localStorage.setItem('token', access_token)
     const userData = await me()

@@ -127,7 +127,13 @@ class TestAccessLevels:
     def _get_token(self, raw_client, create_user, level: int) -> str:
         username = f"user_level{level}"
         create_user(username, "pass123", level=level)
-        return _login(raw_client, username, "pass123").json()["access_token"]
+        user_token = _login(raw_client, username, "pass123").json()["access_token"]
+        r = raw_client.post(
+            "/auth/select-company",
+            json={"company_id": 1},
+            headers=_auth_header(user_token),
+        )
+        return r.json()["access_token"]
 
     def test_level1_can_read_accounts(self, raw_client, create_user):
         token = self._get_token(raw_client, create_user, 1)
