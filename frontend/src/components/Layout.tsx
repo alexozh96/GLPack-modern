@@ -55,16 +55,21 @@ function UserAvatar({ username }: { username: string }) {
   )
 }
 
-function RoleLabel(level: number) {
-  if (level >= 6) return 'Administrator'
-  if (level >= 3) return 'Bookkeeper'
+function RoleLabel(companyLevel: number | undefined, platformRole: string | undefined) {
+  if (platformRole === 'owner') return 'Platform Owner'
+  if (platformRole === 'staff') return 'Support Staff'
+  if (companyLevel !== undefined) {
+    if (companyLevel >= 6) return 'Administrator'
+    if (companyLevel >= 4) return 'Accountant'
+    if (companyLevel >= 3) return 'Bookkeeper'
+  }
   return 'Read Only'
 }
 
 export function Layout() {
   const { user, company, signOut, clearCompany } = useAuth()
   const navigate = useNavigate()
-  const isSystemAdmin = user?.is_system_admin ?? false
+  const isSystemAdmin = user?.platform_role === 'owner'
   const location = useLocation()
   const pageTitle = PAGE_TITLES[location.pathname] ?? 'GLPack Modern'
 
@@ -168,7 +173,7 @@ export function Layout() {
               <UserAvatar username={user.username} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white truncate">{user.username}</div>
-                <div className="text-xs text-white/35 mt-0.5">{RoleLabel(company?.access_level ?? user.access_level)}</div>
+                <div className="text-xs text-white/35 mt-0.5">{RoleLabel(company?.access_level, user.platform_role)}</div>
               </div>
               <button
                 onClick={signOut}

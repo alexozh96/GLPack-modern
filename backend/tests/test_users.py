@@ -30,43 +30,51 @@ class TestListUsers:
 
 class TestCreateUser:
     def test_create_returns_user(self, client):
-        r = client.post("/users", json={"username": "carol", "password": "pass1234", "access_level": 1})
+        r = client.post("/users", json={"username": "carol", "password": "Pass1234"})
         assert r.status_code == 201
         data = r.json()
         assert data["username"] == "carol"
-        assert data["access_level"] == 1
+        assert data["platform_role"] == "user"
         assert "password" not in data
         assert "password_hash" not in data
 
-    def test_create_default_level_is_1(self, client):
-        r = client.post("/users", json={"username": "dave", "password": "pass1234"})
+    def test_create_default_role_is_user(self, client):
+        r = client.post("/users", json={"username": "dave", "password": "Pass1234"})
         assert r.status_code == 201
-        assert r.json()["access_level"] == 1
+        assert r.json()["platform_role"] == "user"
 
     def test_duplicate_username_returns_409(self, client):
-        client.post("/users", json={"username": "eve", "password": "pass1234"})
-        r = client.post("/users", json={"username": "eve", "password": "different"})
+        client.post("/users", json={"username": "eve", "password": "Pass1234"})
+        r = client.post("/users", json={"username": "eve", "password": "Pass5678"})
         assert r.status_code == 409
 
     def test_short_password_returns_422(self, client):
         r = client.post("/users", json={"username": "frank", "password": "x"})
         assert r.status_code == 422
 
-    def test_invalid_level_returns_422(self, client):
-        r = client.post("/users", json={"username": "grace", "password": "pass1234", "access_level": 2})
+    def test_password_no_digit_returns_422(self, client):
+        r = client.post("/users", json={"username": "frank2", "password": "NoDigitHere"})
+        assert r.status_code == 422
+
+    def test_password_no_letter_returns_422(self, client):
+        r = client.post("/users", json={"username": "frank3", "password": "12345678"})
+        assert r.status_code == 422
+
+    def test_invalid_platform_role_returns_422(self, client):
+        r = client.post("/users", json={"username": "grace", "password": "Pass1234", "platform_role": "superuser"})
         assert r.status_code == 422
 
     def test_blank_username_returns_422(self, client):
-        r = client.post("/users", json={"username": "  ", "password": "pass1234"})
+        r = client.post("/users", json={"username": "  ", "password": "Pass1234"})
         assert r.status_code == 422
 
     def test_username_too_long_returns_422(self, client):
-        r = client.post("/users", json={"username": "a" * 21, "password": "pass1234"})
+        r = client.post("/users", json={"username": "a" * 21, "password": "Pass1234"})
         assert r.status_code == 422
 
-    def test_all_valid_levels(self, client):
-        for level in (1, 3, 6):
-            r = client.post("/users", json={"username": f"u{level}", "password": "pass1234", "access_level": level})
+    def test_all_valid_platform_roles(self, client):
+        for role in ("user", "staff", "owner"):
+            r = client.post("/users", json={"username": f"u_{role}", "password": "Pass1234", "platform_role": role})
             assert r.status_code == 201
 
 
@@ -93,17 +101,17 @@ class TestUpdateUser:
         assert r.status_code == 200
         assert r.json()["username"] == "ivan2"
 
-    def test_update_access_level(self, client):
-        u = client.post("/users", json={"username": "jane", "password": "pass1234", "access_level": 1}).json()
-        r = client.put(f"/users/{u['id']}", json={"access_level": 3})
+    def test_update_platform_role(self, client):
+        u = client.post("/users", json={"username": "jane", "password": "Pass1234"}).json()
+        r = client.put(f"/users/{u['id']}", json={"platform_role": "staff"})
         assert r.status_code == 200
-        assert r.json()["access_level"] == 3
+        assert r.json()["platform_role"] == "staff"
 
     def test_update_password_works(self, client, raw_client, create_user):
-        u = client.post("/users", json={"username": "karen", "password": "oldpass1"}).json()
-        client.put(f"/users/{u['id']}", json={"password": "newpass1"})
+        u = client.post("/users", json={"username": "karen", "password": "OldPass1"}).json()
+        client.put(f"/users/{u['id']}", json={"password": "NewPass1"})
         # Verify new password works via /auth/login
-        r = raw_client.post("/auth/login", json={"username": "karen", "password": "newpass1"})
+        r = raw_client.post("/auth/login", json={"username": "karen", "password": "NewPass1"})
         assert r.status_code == 200
 
     def test_update_not_found(self, client):
@@ -117,11 +125,11 @@ class TestUpdateUser:
         assert r.status_code == 409
 
     def test_cannot_demote_self(self, raw_client, create_user):
-        # Create a real system-admin user and log in as them
-        u = create_user("self_admin", "pass1234", level=6, is_system_admin=True)
-        token = raw_client.post("/auth/login", json={"username": "self_admin", "password": "pass1234"}).json()["access_token"]
+        # Create a real platform owner and attempt to remove their own owner role
+        u = create_user("self_admin", "Pass1234", level=6, platform_role="owner")
+        token = raw_client.post("/auth/login", json={"username": "self_admin", "password": "Pass1234"}).json()["access_token"]
         hdrs = {"Authorization": f"Bearer {token}"}
-        r = raw_client.put(f"/users/{u['id']}", json={"access_level": 1}, headers=hdrs)
+        r = raw_client.put(f"/users/{u['id']}", json={"platform_role": "user"}, headers=hdrs)
         assert r.status_code == 422
 
 
@@ -140,8 +148,8 @@ class TestDeleteUser:
         assert r.status_code == 404
 
     def test_cannot_delete_self(self, raw_client, create_user):
-        u = create_user("self_del", "pass1234", level=6, is_system_admin=True)
-        token = raw_client.post("/auth/login", json={"username": "self_del", "password": "pass1234"}).json()["access_token"]
+        u = create_user("self_del", "Pass1234", level=6, platform_role="owner")
+        token = raw_client.post("/auth/login", json={"username": "self_del", "password": "Pass1234"}).json()["access_token"]
         hdrs = {"Authorization": f"Bearer {token}"}
         r = raw_client.delete(f"/users/{u['id']}", headers=hdrs)
         assert r.status_code == 422

@@ -4,13 +4,13 @@ import type { UserRead } from './auth'
 export interface UserCreate {
   username: string
   password: string
-  access_level: number
+  platform_role?: string
 }
 
 export interface UserUpdate {
   username?: string
   password?: string
-  access_level?: number
+  platform_role?: string
   is_active?: boolean
 }
 

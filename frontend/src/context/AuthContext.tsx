@@ -13,10 +13,11 @@ interface AuthContextValue {
   user: UserRead | null
   company: CompanyInfo | null
   loading: boolean
-  signIn: (username: string, password: string) => Promise<void>
+  signIn: (username: string, password: string) => Promise<{ mustChangePassword: boolean }>
   signOut: () => Promise<void>
   selectCompany: (company: CompanyInfo) => Promise<void>
   clearCompany: () => void
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -58,13 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
-  async function signIn(username: string, password: string) {
+  async function signIn(username: string, password: string): Promise<{ mustChangePassword: boolean }> {
     localStorage.removeItem('companyInfo')
     setCompany(null)
-    const { access_token } = await apiLogin({ username, password })
+    const { access_token, must_change_password } = await apiLogin({ username, password })
     localStorage.setItem('token', access_token)
     const userData = await me()
     setUser(userData)
+    return { mustChangePassword: must_change_password }
   }
 
   async function signOut() {
@@ -91,8 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCompany(null)
   }
 
+  async function refreshUser() {
+    const userData = await me()
+    setUser(userData)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, company, loading, signIn, signOut, selectCompany, clearCompany }}>
+    <AuthContext.Provider value={{ user, company, loading, signIn, signOut, selectCompany, clearCompany, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

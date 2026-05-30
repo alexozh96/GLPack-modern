@@ -39,14 +39,15 @@ export interface LoginRequest {
 export interface TokenResponse {
   access_token: string
   token_type: string
+  must_change_password: boolean
 }
 
 export interface UserRead {
   id: number
   username: string
-  access_level: number
-  is_system_admin: boolean
+  platform_role: string
   is_active: boolean
+  must_change_password: boolean
 }
 
 export async function login(data: LoginRequest): Promise<TokenResponse> {
@@ -61,6 +62,10 @@ export async function me(): Promise<UserRead> {
 
 export async function logout(): Promise<void> {
   await api.post('/auth/logout')
+}
+
+export async function changePassword(current_password: string, new_password: string): Promise<void> {
+  await api.post('/auth/change-password', { current_password, new_password })
 }
 
 export interface CompanyInfo {

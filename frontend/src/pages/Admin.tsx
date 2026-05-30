@@ -25,17 +25,19 @@ import {
 } from '../api/companies'
 import type { CompanyRead, UserCompanyAccessRead } from '../api/companies'
 import type { UserRead } from '../api/auth'
+// UserRead used for users list display
 import { useAuth } from '../context/AuthContext'
 import { PageHeader, cls } from '../components/ui'
 import { useToast } from '../context/ToastContext'
 
-const LEVEL_LABELS: Record<number, string> = { 1: 'Read Only', 3: 'Bookkeeper', 6: 'Admin' }
+const LEVEL_LABELS: Record<number, string> = { 1: 'Read Only', 3: 'Bookkeeper', 4: 'Accountant', 6: 'Admin' }
+const ROLE_LABELS: Record<string, string> = { owner: 'Platform Owner', staff: 'Support Staff', user: 'Standard User' }
 
 // ── User tab: inline edit row ─────────────────────────────────────────────────
 
 interface EditState {
   username: string
-  access_level: number
+  platform_role: string
   password: string
 }
 
@@ -50,7 +52,7 @@ function EditRow({
 }) {
   const [form, setForm] = useState<EditState>({
     username: user.username,
-    access_level: user.access_level,
+    platform_role: user.platform_role,
     password: '',
   })
   const [saving, setSaving] = useState(false)
@@ -78,12 +80,12 @@ function EditRow({
       <td className="px-4 py-2">
         <select
           className={`${cls.input} py-1 text-sm`}
-          value={form.access_level}
-          onChange={e => setForm(f => ({ ...f, access_level: Number(e.target.value) }))}
+          value={form.platform_role}
+          onChange={e => setForm(f => ({ ...f, platform_role: e.target.value }))}
         >
-          <option value={1}>Read Only</option>
-          <option value={3}>Bookkeeper</option>
-          <option value={6}>Admin</option>
+          <option value="user">Standard User</option>
+          <option value="staff">Support Staff</option>
+          <option value="owner">Platform Owner</option>
         </select>
       </td>
       <td className="px-4 py-2">
@@ -124,7 +126,7 @@ function EditRow({
 function CreateUserForm({ onCreate }: { onCreate: (u: UserRead) => void }) {
   const toast = useToast()
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ username: '', password: '', access_level: 1 })
+  const [form, setForm] = useState({ username: '', password: '', platform_role: 'user' })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -135,7 +137,7 @@ function CreateUserForm({ onCreate }: { onCreate: (u: UserRead) => void }) {
     try {
       const user = await createUser(form)
       onCreate(user)
-      setForm({ username: '', password: '', access_level: 1 })
+      setForm({ username: '', password: '', platform_role: 'user' })
       setOpen(false)
       toast.success(`User "${user.username}" created`)
     } catch (ex: unknown) {
@@ -174,12 +176,12 @@ function CreateUserForm({ onCreate }: { onCreate: (u: UserRead) => void }) {
             onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Access Level</label>
-          <select className={cls.input} value={form.access_level}
-            onChange={e => setForm(f => ({ ...f, access_level: Number(e.target.value) }))}>
-            <option value={1}>Read Only</option>
-            <option value={3}>Bookkeeper</option>
-            <option value={6}>Admin</option>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Platform Role</label>
+          <select className={cls.input} value={form.platform_role}
+            onChange={e => setForm(f => ({ ...f, platform_role: e.target.value }))}>
+            <option value="user">Standard User</option>
+            <option value="staff">Support Staff</option>
+            <option value="owner">Platform Owner</option>
           </select>
         </div>
       </div>
@@ -199,17 +201,11 @@ function CreateUserForm({ onCreate }: { onCreate: (u: UserRead) => void }) {
 
 // ── Companies tab: company users panel ───────────────────────────────────────
 
-function CompanyUsersPanel({
-  company,
-  allUsers,
-}: {
-  company: CompanyRead
-  allUsers: UserRead[]
-}) {
+function CompanyUsersPanel({ company }: { company: CompanyRead }) {
   const toast = useToast()
   const [members, setMembers] = useState<UserCompanyAccessRead[]>([])
   const [loading, setLoading] = useState(true)
-  const [addForm, setAddForm] = useState({ user_id: 0, access_level: 1 })
+  const [addForm, setAddForm] = useState({ username: '', access_level: 1 })
   const [addOpen, setAddOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -220,18 +216,15 @@ function CompanyUsersPanel({
       .finally(() => setLoading(false))
   }, [company.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const memberIds = new Set(members.map(m => m.user_id))
-  const availableUsers = allUsers.filter(u => !memberIds.has(u.id))
-
   async function handleAssign(e: React.FormEvent) {
     e.preventDefault()
-    if (!addForm.user_id) return
+    if (!addForm.username.trim()) return
     setSaving(true)
     try {
-      await assignUser(company.id, { user_id: addForm.user_id, access_level: addForm.access_level })
+      await assignUser(company.id, { username: addForm.username.trim(), access_level: addForm.access_level })
       const updated = await getCompanyUsers(company.id)
       setMembers(updated)
-      setAddForm({ user_id: 0, access_level: 1 })
+      setAddForm({ username: '', access_level: 1 })
       setAddOpen(false)
       toast.success('User assigned')
     } catch {
@@ -291,6 +284,7 @@ function CompanyUsersPanel({
                   >
                     <option value={1}>Read Only</option>
                     <option value={3}>Bookkeeper</option>
+                    <option value={4}>Accountant</option>
                     <option value={6}>Admin</option>
                   </select>
                 </td>
@@ -312,18 +306,15 @@ function CompanyUsersPanel({
       {addOpen ? (
         <form onSubmit={handleAssign} className="flex items-end gap-2">
           <div>
-            <label className="block text-xs text-slate-500 mb-1">User</label>
-            <select
+            <label className="block text-xs text-slate-500 mb-1">Username</label>
+            <input
               required
-              className="h-8 px-2 rounded border border-slate-300 text-xs text-slate-700 bg-white focus:outline-none focus:border-[#0875e1]"
-              value={addForm.user_id}
-              onChange={e => setAddForm(f => ({ ...f, user_id: Number(e.target.value) }))}
-            >
-              <option value={0}>Select user…</option>
-              {availableUsers.map(u => (
-                <option key={u.id} value={u.id}>{u.username}</option>
-              ))}
-            </select>
+              type="text"
+              placeholder="Enter username…"
+              className="h-8 px-2 rounded border border-slate-300 text-xs text-slate-700 bg-white focus:outline-none focus:border-[#0875e1] w-36"
+              value={addForm.username}
+              onChange={e => setAddForm(f => ({ ...f, username: e.target.value }))}
+            />
           </div>
           <div>
             <label className="block text-xs text-slate-500 mb-1">Level</label>
@@ -334,10 +325,11 @@ function CompanyUsersPanel({
             >
               <option value={1}>Read Only</option>
               <option value={3}>Bookkeeper</option>
+              <option value={4}>Accountant</option>
               <option value={6}>Admin</option>
             </select>
           </div>
-          <button type="submit" disabled={saving || !addForm.user_id}
+          <button type="submit" disabled={saving || !addForm.username.trim()}
             className="h-8 px-3 rounded bg-[#0875e1] text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50">
             {saving ? 'Assigning…' : 'Add'}
           </button>
@@ -349,12 +341,10 @@ function CompanyUsersPanel({
       ) : (
         <button
           onClick={() => setAddOpen(true)}
-          disabled={availableUsers.length === 0}
-          className="flex items-center gap-1 text-xs text-[#0875e1] font-medium hover:underline disabled:text-slate-400 disabled:no-underline"
+          className="flex items-center gap-1 text-xs text-[#0875e1] font-medium hover:underline"
         >
           <Plus className="w-3 h-3" />
           Add user
-          {availableUsers.length === 0 && ' (all users assigned)'}
         </button>
       )}
     </div>
@@ -437,7 +427,7 @@ function CreateCompanyForm({ onCreate }: { onCreate: (c: CompanyRead) => void })
 
 // ── Companies tab ─────────────────────────────────────────────────────────────
 
-function CompaniesTab({ allUsers }: { allUsers: UserRead[] }) {
+function CompaniesTab() {
   const toast = useToast()
   const [companies, setCompanies] = useState<CompanyRead[]>([])
   const [loading, setLoading] = useState(true)
@@ -540,7 +530,7 @@ function CompaniesTab({ allUsers }: { allUsers: UserRead[] }) {
                 {expandedId === company.id && (
                   <tr key={`${company.id}-panel`}>
                     <td colSpan={7} className="p-0">
-                      <CompanyUsersPanel company={company} allUsers={allUsers} />
+                      <CompanyUsersPanel company={company} />
                     </td>
                   </tr>
                 )}
@@ -575,9 +565,9 @@ export function Admin() {
   }, [])
 
   async function handleSave(id: number, data: EditState) {
-    const payload: { username?: string; password?: string; access_level?: number } = {
+    const payload: { username?: string; password?: string; platform_role?: string } = {
       username: data.username,
-      access_level: data.access_level,
+      platform_role: data.platform_role,
     }
     if (data.password) payload.password = data.password
     try {
@@ -662,14 +652,17 @@ export function Admin() {
                           <td className="px-4 py-3 font-medium text-slate-800">
                             <div className="flex items-center gap-2">
                               {user.username}
-                              {user.is_system_admin && (
-                                <span title="System Admin" className="text-[#0875e1]">
+                              {user.platform_role === 'owner' && (
+                                <span title="Platform Owner" className="text-[#0875e1]">
                                   <ShieldCheck className="w-3.5 h-3.5" />
                                 </span>
                               )}
+                              {user.must_change_password && (
+                                <span title="Must change password" className="text-amber-500 text-xs font-medium">⚠</span>
+                              )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-slate-600">{LEVEL_LABELS[user.access_level] ?? user.access_level}</td>
+                          <td className="px-4 py-3 text-slate-600">{ROLE_LABELS[user.platform_role] ?? user.platform_role}</td>
                           <td className="px-4 py-3 text-slate-400 text-xs">
                             <span className="flex items-center gap-1"><KeyRound className="w-3 h-3" /> ••••••</span>
                           </td>
@@ -686,7 +679,7 @@ export function Admin() {
                                 className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors">
                                 <Pencil className="w-3 h-3" /> Edit
                               </button>
-                              {user.id !== me?.id && !user.is_system_admin && (
+                              {user.id !== me?.id && user.platform_role !== 'owner' && (
                                 <button
                                   onClick={() => handleToggleActive(user)}
                                   className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
@@ -715,7 +708,7 @@ export function Admin() {
       )}
 
       {activeTab === 'companies' && (
-        <CompaniesTab allUsers={users} />
+        <CompaniesTab />
       )}
     </div>
   )

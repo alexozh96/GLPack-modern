@@ -16,6 +16,12 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+
+  // Force password change before accessing any other page
+  if (user.must_change_password && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
+
   return <>{children}</>
 }
 
@@ -25,16 +31,23 @@ export function CompanyRequired({ children }: { children: ReactNode }) {
 
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+  if (user.must_change_password) return <Navigate to="/change-password" replace />
   if (!company) return <Navigate to="/companies" replace />
   return <>{children}</>
 }
 
-export function SystemAdminRoute({ children }: { children: ReactNode }) {
+export function PlatformOwnerRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
   const location = useLocation()
 
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
-  if (!user.is_system_admin) return <Navigate to="/dashboard" replace />
+  if (user.must_change_password) return <Navigate to="/change-password" replace />
+  if (user.platform_role !== 'owner') return <Navigate to="/dashboard" replace />
   return <>{children}</>
+}
+
+/** @deprecated use PlatformOwnerRoute */
+export function SystemAdminRoute({ children }: { children: ReactNode }) {
+  return <PlatformOwnerRoute>{children}</PlatformOwnerRoute>
 }

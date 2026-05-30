@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFi
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import CompanyAdmin, CompanyUser
+from app.auth import CompanyAccountant, CompanyUser
 from app.database import get_db
 from app.models.account import Account
 from app.models.ledger import LedgerEntry
@@ -85,7 +85,7 @@ def get_account(code: str, ctx: CompanyUser, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=AccountRead, status_code=201)
-def create_account(body: AccountCreate, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+def create_account(body: AccountCreate, ctx: CompanyAccountant, db: Session = Depends(get_db)):
     _, company_id, _ = ctx
     if db.get(Account, (company_id, body.code)):
         raise HTTPException(status_code=409, detail="Account code already exists")
@@ -97,7 +97,7 @@ def create_account(body: AccountCreate, ctx: CompanyAdmin, db: Session = Depends
 
 
 @router.put("/{code}", response_model=AccountRead)
-def update_account(code: str, body: AccountUpdate, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+def update_account(code: str, body: AccountUpdate, ctx: CompanyAccountant, db: Session = Depends(get_db)):
     _, company_id, _ = ctx
     account = db.get(Account, (company_id, code.upper()))
     if not account:
@@ -109,7 +109,7 @@ def update_account(code: str, body: AccountUpdate, ctx: CompanyAdmin, db: Sessio
 
 
 @router.delete("/bulk", response_model=BulkDeleteResult)
-def bulk_delete_accounts(body: BulkDeleteIn, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+def bulk_delete_accounts(body: BulkDeleteIn, ctx: CompanyAccountant, db: Session = Depends(get_db)):
     _, company_id, _ = ctx
     deleted = 0
     skipped: list[str] = []
@@ -133,17 +133,24 @@ def bulk_delete_accounts(body: BulkDeleteIn, ctx: CompanyAdmin, db: Session = De
 
 
 @router.delete("/{code}", status_code=204)
-def delete_account(code: str, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+def delete_account(code: str, ctx: CompanyAccountant, db: Session = Depends(get_db)):
     _, company_id, _ = ctx
     account = db.get(Account, (company_id, code.upper()))
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
+    has_entries = (
+        db.query(LedgerEntry)
+        .filter(LedgerEntry.company_id == company_id, LedgerEntry.account == code.upper())
+        .first()
+    )
+    if has_entries:
+        raise HTTPException(status_code=409, detail="Cannot delete account with existing ledger entries")
     db.delete(account)
     db.commit()
 
 
 @router.post("/import-csv", response_model=AccountImportResult)
-async def import_accounts_csv(file: UploadFile, ctx: CompanyAdmin, db: Session = Depends(get_db)):
+async def import_accounts_csv(file: UploadFile, ctx: CompanyAccountant, db: Session = Depends(get_db)):
     _, company_id, _ = ctx
     content = await file.read()
     try:

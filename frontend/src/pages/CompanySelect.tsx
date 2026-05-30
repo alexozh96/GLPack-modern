@@ -7,6 +7,7 @@ import { Building2 } from 'lucide-react'
 
 function levelLabel(level: number) {
   if (level >= 6) return 'Admin'
+  if (level >= 4) return 'Accountant'
   if (level >= 3) return 'Bookkeeper'
   return 'Read Only'
 }

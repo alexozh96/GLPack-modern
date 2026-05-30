@@ -5,7 +5,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.models  # noqa: F401 — registers all models with Base.metadata
-from app.auth import get_current_company, get_current_user, hash_password
+from app.auth import (
+    _get_any_authenticated_user,
+    get_current_company,
+    get_current_user,
+    hash_password,
+)
 from app.database import Base, get_db
 from app.limiter import login_rate_limit
 from app.main import app
@@ -23,15 +28,14 @@ _Session = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
 _TEST_COMPANY_ID = 1
 
-# Reusable mock admin — returned by the auth dependency overrides in `client`.
-# is_system_admin=True so /users endpoints (which require SystemAdmin) work.
+# Reusable mock platform owner — used by auth dependency overrides in `client`.
 _MOCK_ADMIN = User(
     id=999,
     username="testadmin",
     password_hash="",
-    access_level=6,
+    platform_role="owner",
     is_active=True,
-    is_system_admin=True,
+    must_change_password=False,
 )
 
 
@@ -69,12 +73,13 @@ def _seed_company():
 @pytest.fixture
 def client(_reset_db):
     """
-    Standard test client: DB overridden, auth bypassed with a mock system-admin.
+    Standard test client: DB overridden, auth bypassed with a mock platform owner.
     Company 1 is pre-seeded so setup and company-scoped endpoints work.
     """
     _seed_company()
     app.dependency_overrides[get_db] = _db_override
     app.dependency_overrides[get_current_user] = lambda: _MOCK_ADMIN
+    app.dependency_overrides[_get_any_authenticated_user] = lambda: _MOCK_ADMIN
     app.dependency_overrides[get_current_company] = lambda: (_MOCK_ADMIN, _TEST_COMPANY_ID, 6)
     app.dependency_overrides[login_rate_limit] = lambda: None
     with TestClient(app) as c:
@@ -101,13 +106,14 @@ def create_user():
     Factory fixture: inserts a User, ensures Company 1 exists, and grants the
     user per-company access. Returns plain-text credentials so tests can call
     /auth/login and /auth/select-company.
-    Usage:  user = create_user("alice", "pass123", level=3)
+
+    Usage:  user = create_user("alice", "Pass1234", level=3)
     """
     def _factory(
         username: str,
         password: str,
         level: int = 1,
-        is_system_admin: bool = False,
+        platform_role: str = "user",
     ) -> dict:
         db = _Session()
         try:
@@ -123,9 +129,9 @@ def create_user():
             u = User(
                 username=username,
                 password_hash=hash_password(password),
-                access_level=level,
+                platform_role=platform_role,
                 is_active=True,
-                is_system_admin=is_system_admin,
+                must_change_password=False,
             )
             db.add(u)
             db.flush()
@@ -142,7 +148,7 @@ def create_user():
                 "username": username,
                 "password": password,
                 "access_level": level,
-                "is_system_admin": is_system_admin,
+                "platform_role": platform_role,
             }
         finally:
             db.close()

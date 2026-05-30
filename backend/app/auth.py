@@ -1,19 +1,24 @@
 """
 JWT + bcrypt authentication helpers and FastAPI dependencies.
 
-Access levels:
-  1  read-only  (any authenticated user)
-  3  entry      (can create/edit journal transactions and phrases)
-  6  admin      (user management, chart-of-accounts changes, setup)
+Platform roles (User.platform_role):
+  'owner'  — full platform control: create companies/users, view all data
+  'staff'  — view-only across all companies (read-only, no financial writes)
+  'user'   — standard user, scoped to explicitly assigned companies only
 
-System admin (is_system_admin=True): cross-company user management, company creation.
+Company access levels (UserCompanyAccess.access_level):
+  1  viewer      — read-only
+  3  bookkeeper  — create/edit/delete journals, phrases, bank reconciliation
+  4  accountant  — bookkeeper + create/edit/delete chart-of-accounts
+  6  admin       — full company control: setup, period close, user management
 
 Two token types:
-  user-token    — payload: {sub, jti, exp}          — issued on login
-  company-token — payload: {sub, company_id, jti, exp} — issued on select-company
+  user-token    — payload: {sub, jti, exp}              — issued on login
+  company-token — payload: {sub, company_id, jti, exp}  — issued on select-company
 """
 
 import os
+import sys
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
@@ -28,9 +33,23 @@ from app.database import get_db
 from app.models.token_deny import TokenDeny
 from app.models.user import User
 
-SECRET_KEY: str = os.getenv("SECRET_KEY", "glpack-dev-secret-change-in-production")
+_DEFAULT_SECRET = "glpack-dev-secret-change-in-production"
+SECRET_KEY: str = os.getenv("SECRET_KEY", _DEFAULT_SECRET)
 ALGORITHM = "HS256"
 _EXPIRE_MINUTES = int(os.getenv("TOKEN_EXPIRE_HOURS", "8")) * 60
+
+# Refuse to start with the hardcoded default key outside of test/dev contexts.
+# "pytest" is in sys.modules when pytest is running; devs can also set
+# GLPACK_INSECURE_DEV=1 in their .env to bypass for local development.
+if (
+    SECRET_KEY == _DEFAULT_SECRET or len(SECRET_KEY) < 32
+) and "pytest" not in sys.modules and not os.getenv("GLPACK_INSECURE_DEV"):
+    raise RuntimeError(
+        "SECRET_KEY is not configured or too weak (min 32 chars). "
+        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\" "
+        "and set it in your .env file. "
+        "For local dev only, set GLPACK_INSECURE_DEV=1 in .env to bypass this check."
+    )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -57,12 +76,10 @@ def create_token(user_id: int, company_id: int | None = None) -> tuple[str, str]
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM), jti
 
 
-# ── FastAPI dependencies ──────────────────────────────────────────────────────
+# ── core token → user resolution (no policy checks) ──────────────────────────
 
-def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: Session = Depends(get_db),
-) -> User:
+def _resolve_user_from_token(token: str, db: Session) -> User:
+    """Decode the token and return the matching active user. No policy enforcement."""
     exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Not authenticated",
@@ -82,10 +99,37 @@ def get_current_user(
         raise exc
 
     user = db.get(User, int(user_id))
-    if not user:
+    if not user or not user.is_active:
         raise exc
-    if not user.is_active:
-        raise exc
+    return user
+
+
+# ── FastAPI dependencies ──────────────────────────────────────────────────────
+
+def _get_any_authenticated_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+) -> User:
+    """Authenticate the user but do NOT enforce must_change_password.
+    Use for endpoints that must remain accessible during the forced password-change flow
+    (logout, /auth/me, /auth/change-password)."""
+    return _resolve_user_from_token(token, db)
+
+
+def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+) -> User:
+    """Authenticate and enforce must_change_password. Used by all normal endpoints."""
+    user = _resolve_user_from_token(token, db)
+    if user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "MUST_CHANGE_PASSWORD",
+                "message": "Password change required before using this endpoint.",
+            },
+        )
     return user
 
 
@@ -95,9 +139,12 @@ def get_current_company(
 ) -> tuple[User, int, int]:
     """
     Returns (user, company_id, access_level).
-    Raises 401 if token has no company_id.
-    Raises 403 if user no longer has access to that company.
-    System admins bypass the access table check and receive access_level 6.
+
+    Platform owners  → access_level 6 in any active company.
+    Platform staff   → access_level 1 (read-only) in any active company.
+    Standard users   → access_level from UserCompanyAccess; 403 if not assigned.
+
+    Raises 401 if the token has no company_id claim.
     """
     from app.models.company import Company
     from app.models.user_company_access import UserCompanyAccess
@@ -120,28 +167,21 @@ def get_current_company(
             detail="No company selected. POST /auth/select-company first.",
         )
 
-    if user.is_system_admin:
-        company = db.get(Company, company_id)
-        if not company or not company.is_active:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company not found or inactive")
+    company = db.get(Company, company_id)
+    if not company or not company.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company not found or inactive")
+
+    if user.platform_role == "owner":
         return user, company_id, 6
 
+    if user.platform_role == "staff":
+        return user, company_id, 1
+
+    # Standard user — must have explicit per-company access
     access = db.query(UserCompanyAccess).filter_by(user_id=user.id, company_id=company_id).first()
     if not access:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No access to this company")
     return user, company_id, access.access_level
-
-
-def require_level(min_level: int):
-    """Return a dependency that enforces a minimum global access level."""
-    def _dep(user: Annotated[User, Depends(get_current_user)]) -> User:
-        if user.access_level < min_level:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access level {min_level} or higher required",
-            )
-        return user
-    return _dep
 
 
 def require_company_level(min_level: int):
@@ -159,24 +199,38 @@ def require_company_level(min_level: int):
     return _dep
 
 
-def _require_system_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
-    if not user.is_system_admin:
+def _require_platform_owner(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if user.platform_role != "owner":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="System administrator access required",
+            detail="Platform owner access required",
+        )
+    return user
+
+
+def _require_platform_staff_or_owner(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if user.platform_role not in ("owner", "staff"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform staff or owner access required",
         )
     return user
 
 
 # ── Annotated shorthands ──────────────────────────────────────────────────────
 
-# Global / non-company-scoped
+# Bypass must_change_password — for logout, /me, /change-password only
+AnyAuthenticatedUser = Annotated[User, Depends(_get_any_authenticated_user)]
+
+# Normal authenticated user (blocks must_change_password)
 CurrentUser = Annotated[User, Depends(get_current_user)]
-WriteAccess = Annotated[User, Depends(require_level(3))]
-AdminAccess = Annotated[User, Depends(require_level(6))]
-SystemAdmin = Annotated[User, Depends(_require_system_admin)]
+
+# Platform-level roles
+PlatformOwner = Annotated[User, Depends(_require_platform_owner)]
+PlatformStaff = Annotated[User, Depends(_require_platform_staff_or_owner)]
 
 # Company-scoped — yield (user, company_id, access_level)
-CompanyUser  = Annotated[tuple[User, int, int], Depends(get_current_company)]
-CompanyWrite = Annotated[tuple[User, int, int], Depends(require_company_level(3))]
-CompanyAdmin = Annotated[tuple[User, int, int], Depends(require_company_level(6))]
+CompanyUser      = Annotated[tuple[User, int, int], Depends(get_current_company)]
+CompanyWrite     = Annotated[tuple[User, int, int], Depends(require_company_level(3))]
+CompanyAccountant = Annotated[tuple[User, int, int], Depends(require_company_level(4))]
+CompanyAdmin     = Annotated[tuple[User, int, int], Depends(require_company_level(6))]

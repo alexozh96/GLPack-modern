@@ -18,11 +18,17 @@ export function Login() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+    let mustChangePassword = false
     try {
-      await signIn(username, password)
+      const result = await signIn(username, password)
+      mustChangePassword = result.mustChangePassword
     } catch {
       setError('Invalid username or password.')
       setLoading(false)
+      return
+    }
+    if (mustChangePassword) {
+      navigate('/change-password', { replace: true })
       return
     }
     try {

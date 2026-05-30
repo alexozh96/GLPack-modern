@@ -1,4 +1,4 @@
-"""Seed the default admin user (username: admin, password: admin123, level: 6)."""
+"""Seed the default admin user. Password must be changed on first login."""
 from sqlalchemy.orm import Session
 
 from app.auth import hash_password
@@ -10,8 +10,8 @@ def seed_users(session: Session) -> int:
         return 0  # already exists
     session.add(User(
         username="admin",
-        password_hash=hash_password("admin123"),
-        access_level=6,
-        is_system_admin=True,
+        password_hash=hash_password("Admin123!"),
+        platform_role="owner",
+        must_change_password=True,
     ))
     return 1

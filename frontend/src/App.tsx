@@ -5,6 +5,7 @@ import { SetupProvider } from './context/SetupContext'
 import { ProtectedRoute, CompanyRequired, SystemAdminRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
+import { ChangePassword } from './pages/ChangePassword'
 import { CompanySelect } from './pages/CompanySelect'
 import { Dashboard } from './pages/Dashboard'
 import { Accounts } from './pages/Accounts'
@@ -23,6 +24,14 @@ function App() {
         <ToastProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute>
+                  <ChangePassword />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/companies"
               element={

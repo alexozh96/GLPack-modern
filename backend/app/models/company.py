@@ -13,5 +13,5 @@ class Company(Base):
     financial_year_end: Mapped[str] = mapped_column(String(5), nullable=False, server_default="12-31")
     current_period: Mapped[str | None] = mapped_column(String(10), nullable=True)
     locked_before: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)

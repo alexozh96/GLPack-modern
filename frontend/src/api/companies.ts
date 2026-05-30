@@ -31,7 +31,7 @@ export interface UserCompanyAccessRead {
 }
 
 export interface AssignUserBody {
-  user_id: number
+  username: string
   access_level: number
 }
 

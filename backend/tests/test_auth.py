@@ -57,7 +57,7 @@ class TestMe:
         assert me.status_code == 200
         data = me.json()
         assert data["username"] == "dan"
-        assert data["access_level"] == 3
+        assert data["platform_role"] == "user"
         assert data["id"] == u["id"]
 
     def test_no_token_returns_401(self, raw_client):
