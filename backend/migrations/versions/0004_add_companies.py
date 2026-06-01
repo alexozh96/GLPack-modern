@@ -96,7 +96,7 @@ def upgrade() -> None:
         sa.Column("phrase", sa.String(45), nullable=False),
         sa.Column("dr_code", sa.String(4), nullable=True),
         sa.Column("cr_code", sa.String(4), nullable=True),
-        sa.UniqueConstraint("company_id", "phrase", "dr_code", "cr_code", name="uq_phrase_codes"),
+        sa.UniqueConstraint("company_id", "phrase", "dr_code", "cr_code", name="uq_phrase_codes_new"),
     )
     bind.execute(
         sa.text("INSERT INTO phrases_new (id, company_id, phrase, dr_code, cr_code) SELECT id, 1, phrase, dr_code, cr_code FROM phrases")
