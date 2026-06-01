@@ -100,9 +100,9 @@ function Combobox({ value, onChange, options, placeholder, inputClass = '' }: {
 // ── Journal Page ──────────────────────────────────────────────────────────────
 
 export function Journal() {
-  const { user } = useAuth()
+  const { company } = useAuth()
   const location = useLocation()
-  const canWrite = (user?.access_level ?? 0) >= 3
+  const canWrite = (company?.access_level ?? 0) >= 3
   const toast = useToast()
 
   const { fyStart, fyEnd, ready: fyReady } = useFiscalYear()

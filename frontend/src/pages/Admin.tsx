@@ -30,7 +30,6 @@ import { useAuth } from '../context/AuthContext'
 import { PageHeader, cls } from '../components/ui'
 import { useToast } from '../context/ToastContext'
 
-const LEVEL_LABELS: Record<number, string> = { 1: 'Read Only', 3: 'Bookkeeper', 4: 'Accountant', 6: 'Admin' }
 const ROLE_LABELS: Record<string, string> = { owner: 'Platform Owner', staff: 'Support Staff', user: 'Standard User' }
 
 // ── User tab: inline edit row ─────────────────────────────────────────────────

@@ -48,9 +48,9 @@ const ACTIVE_PRESET = 'h-8 px-3 text-xs font-semibold rounded-lg bg-[#0875e1] te
 const INACTIVE_PRESET = 'h-8 px-3 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors'
 
 export function Dashboard() {
-  const { user } = useAuth()
+  const { company } = useAuth()
   const navigate = useNavigate()
-  const canWrite = (user?.access_level ?? 0) >= 3
+  const canWrite = (company?.access_level ?? 0) >= 3
 
   const { fyStart, fyEnd, isConfigured, ready: fyReady } = useFiscalYear()
 

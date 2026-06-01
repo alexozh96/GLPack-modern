@@ -43,8 +43,8 @@ function SummaryBar({ summary }: { summary: ReconcSummary | null }) {
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export function BankReconciliation() {
-  const { user } = useAuth()
-  const canWrite = (user?.access_level ?? 0) >= 3
+  const { company } = useAuth()
+  const canWrite = (company?.access_level ?? 0) >= 3
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [bankRows, setBankRows] = useState<BankRowRead[]>([])

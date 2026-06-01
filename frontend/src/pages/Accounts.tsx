@@ -45,8 +45,8 @@ function parseCsvPreview(text: string): { headers: string[]; rows: string[][]; t
 }
 
 export function Accounts() {
-  const { user } = useAuth()
-  const isAdmin = (user?.access_level ?? 0) >= 6
+  const { company } = useAuth()
+  const isAdmin = (company?.access_level ?? 0) >= 6
 
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
